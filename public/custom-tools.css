@@ -11,9 +11,19 @@
   cursor: pointer;
 }
 .custom-tools-launch:hover { background: #315347; }
+.catalog-tool-tree {
+  border-color: #648d76;
+  background: #263f34;
+  color: #d5f4df;
+}
+.catalog-tool-import {
+  border-color: #668d8c;
+  background: #253c3c;
+  color: #d5eeee;
+}
 .custom-tools-dialog {
-  width: min(980px, calc(100vw - 36px));
-  max-width: 980px;
+  width: min(700px, calc(100vw - 36px));
+  max-width: 700px;
   max-height: min(90dvh, 900px);
   padding: 0;
   overflow: hidden;
@@ -36,7 +46,8 @@
   border-radius: 8px; background: #253530; color: #e2eee8; font-size: 21px; cursor: pointer;
 }
 .custom-tools-content {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px; padding: 16px; overflow: auto; overscroll-behavior: contain;
 }
 .custom-tool-card {
