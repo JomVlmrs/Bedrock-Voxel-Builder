@@ -78,7 +78,7 @@ jobs:
           html = root / "index.html"
           if html.is_file():
               source = html.read_text(encoding="utf-8")
-              for ref in re.findall(r'''(?:src|href)\s*=\s*["']([^"']+)["']''', source, re.I):
+              for ref in re.findall(r'''(?:src|href)\s*=\s*"([^"]+)"''', source, re.I):
                   check_ref(html, ref)
 
           for path in root.rglob("*"):
@@ -86,17 +86,17 @@ jobs:
                   continue
               if path.suffix in (".js", ".mjs"):
                   source = path.read_text(encoding="utf-8")
-                  for ref in re.findall(r'''(?:from\s*|import\s*\()\s*["']([^"']+)["']''', source):
+                  for ref in re.findall(r'''(?:from\s*|import\s*\()\s*"([^"]+)"''', source):
                       if ref.startswith("."):
                           check_ref(path, ref)
-                  for ref in re.findall(r'''new URL\(\s*["']([^"']+)["']''', source):
+                  for ref in re.findall(r'''new URL\(\s*"([^"]+)"''', source):
                       if ref.startswith("."):
                           check_ref(path, ref)
               elif path.suffix == ".css":
                   source = path.read_text(encoding="utf-8")
-                  for ref in re.findall(r'''url\(\s*["']?([^"')]+)''', source, re.I):
+                  for ref in re.findall(r'''url\(\s*"?([^")]+)"?\s*\)''', source, re.I):
                       check_ref(path, ref)
-                  for ref in re.findall(r'''@import\s+["']([^"']+)["']''', source, re.I):
+                  for ref in re.findall(r'''@import\s*"([^"]+)"''', source, re.I):
                       check_ref(path, ref)
 
           if errors:
