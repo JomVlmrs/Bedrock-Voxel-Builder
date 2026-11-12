@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "public/**"
+      - ".github/workflows/jekyll-gh-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,24 +28,90 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Verify public site files
+      - name: Verify local file connections
         shell: bash
         run: |
-          test -s ./public/index.html
-          test -s ./public/builder.js
-          test -s ./public/data/vanilla-blocks.json
-          test -s ./public/data/block-states.json
-          test -s ./public/data/terrain_texture.json
-          test -s ./public/data/sample-version.json
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          root = Path("public").resolve()
+          errors = []
+          checked = set()
+
+          def check_ref(source, ref):
+              ref = ref.strip().split("#", 1)[0].split("?", 1)[0]
+              if not ref or ref.startswith(("https://", "http://", "//", "data:", "blob:", "mailto:", "javascript:", "#")):
+                  return
+              target = (source.parent / ref).resolve()
+              try:
+                  target.relative_to(root)
+              except ValueError:
+                  errors.append(f"{source.relative_to(root)}: reference escapes public/: {ref}")
+                  return
+              if not target.is_file():
+                  errors.append(f"{source.relative_to(root)}: missing local file: {ref}")
+              checked.add(target)
+
+          required = [
+              "index.html", "builder.js", "custom-tools.js", "catalog-fallback.js",
+              "bedrock-models.js", "converter.js", "styles.css", "responsive.css",
+              "device-layout.css", "custom-tools.css", "data/vanilla-blocks.json",
+              "data/block-states.json", "data/terrain_texture.json",
+              "data/sample-version.json", "data/models/shelf_mushroom_small.geo.json",
+              "data/models/shelf_mushroom_large.geo.json",
+              "data/models/straw_bed_foot.geo.json", "data/models/straw_bed_head.geo.json"
+          ]
+          for name in required:
+              if not (root / name).is_file():
+                  errors.append(f"required file missing: public/{name}")
+
+          html = root / "index.html"
+          if html.is_file():
+              source = html.read_text(encoding="utf-8")
+              for ref in re.findall(r'''(?:src|href)\\s*=\\s*["']([^"']+)["']''', source, re.I):
+                  check_ref(html, ref)
+
+          for path in root.rglob("*"):
+              if not path.is_file():
+                  continue
+              if path.suffix in (".js", ".mjs"):
+                  source = path.read_text(encoding="utf-8")
+                  for ref in re.findall(r'''(?:from\\s*|import\\s*\\()\\s*["']([^"']+)["']''', source):
+                      if ref.startswith("."):
+                          check_ref(path, ref)
+                  for ref in re.findall(r'''new URL\\(\\s*["']([^"']+)["']''', source):
+                      if ref.startswith("."):
+                          check_ref(path, ref)
+              elif path.suffix == ".css":
+                  source = path.read_text(encoding="utf-8")
+                  for ref in re.findall(r'''url\\(\\s*["']?([^"')]+)''', source, re.I):
+                      check_ref(path, ref)
+                  for ref in re.findall(r'''@import\\s+["']([^"']+)["']''', source, re.I):
+                      check_ref(path, ref)
+
+          if errors:
+              print("Static file connection check failed:")
+              print("\\n".join(f"- {error}" for error in errors))
+              sys.exit(1)
+
+          print(f"Static file connection check passed ({len(checked)} local references checked).")
+          PY
 
       - name: Build static site from ./public
         shell: bash
         run: |
+          test -s ./public/index.html
+          rm -rf ./_site
           mkdir -p ./_site
           cp -a ./public/. ./_site/
           touch ./_site/.nojekyll
           test -s ./_site/index.html
+          test -s ./_site/builder.js
           test -s ./_site/data/vanilla-blocks.json
+          test -s ./_site/data/block-states.json
+          test -s ./_site/data/terrain_texture.json
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
