@@ -11,7 +11,7 @@ const treeButton = $('#generateTree');
 let builder = null;
 // GitHub Pages is a static host; persisted custom-block uploads need Hatchable's API.
 const customBlockApiAvailable = !/\.github\.io$/i.test(location.hostname);
-const customBlockApiUrl = new URL("./api/custom-blocks", document.baseURI).href;
+const customBlockApiUrl = "/api/custom-blocks";
 
 const treePresets = {
   oak: { log: 'oak_log', leaves: 'oak_leaves', style: 'round', label: 'Oak' },
