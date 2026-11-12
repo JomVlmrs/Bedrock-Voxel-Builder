@@ -287,36 +287,28 @@
 
         <section class="custom-tool-card" aria-labelledby="blockImportTitle">
           <h3 id="blockImportTitle">Import custom block</h3>
-          <p class="custom-tool-lead">Add a namespaced block ID, display name, Bedrock geometry model and one or more textures. Files are saved to your private project library.</p>
+          <p class="custom-tool-lead">Enter the block identifier and its display-only name, then select the Bedrock geometry model and one texture image. Files are saved to your private project library.</p>
           <form id="customBlockForm" class="custom-tool-form">
             <label class="custom-field">
-              <span>Block identifier</span>
-              <input id="customBlockId" type="text" placeholder="custom:ancient_oak" autocomplete="off" required maxlength="128">
+              <span>Identifier · Block ID</span>
+              <input id="customBlockId" type="text" placeholder="custom:ancient_oak" autocomplete="off" required maxlength="128" spellcheck="false">
             </label>
             <label class="custom-field">
-              <span>Block name</span>
+              <span>Display Name</span>
               <input id="customBlockName" type="text" placeholder="Ancient Oak" autocomplete="off" required maxlength="80">
+              <small class="custom-help">Name only. This changes the label shown in the block table, not the Identifier.</small>
             </label>
             <label class="custom-field">
-              <span>Block model · Bedrock .geo.json</span>
+              <span>Block Model · Bedrock .geo.json</span>
               <input id="customBlockModel" type="file" accept=".json,.geo.json,application/json" required>
             </label>
             <label class="custom-field">
-              <span>Block textures · PNG, JPG, WebP</span>
-              <input id="customBlockTextures" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" multiple required>
+              <span>Block Texture · PNG, JPG, WebP</span>
+              <input id="customBlockTexture" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" required>
             </label>
-            <p class="custom-help">Upload multiple textures when the model has different material names. Each filename is matched to the model material; the first texture is the fallback for all faces.</p>
-            <label class="custom-field">
-              <span>Texture rendering</span>
-              <select id="customBlockRenderMode">
-                <option value="cutout">Alpha cutout · leaves / holes</option>
-                <option value="opaque">Opaque · solid surfaces</option>
-                <option value="transparent">Transparent · glass-like</option>
-                <option value="double-sided">Double-sided · visible both sides</option>
-              </select>
-            </label>
-            <button id="importCustomBlock" class="custom-tool-button" type="submit">Upload &amp; add to block table</button>
-            <p id="importStatus" class="custom-status" role="status">Model size: 2 MB max. Texture size: 5 MB each, 12 MB total.</p>
+            <p class="custom-help">Choose the geometry model and its texture image. The texture is applied to the model as its default material.</p>
+            <button id="importCustomBlock" class="custom-tool-button" type="submit">Import custom block</button>
+            <p id="importStatus" class="custom-status" role="status">Model size: 2 MB max. Texture size: 5 MB max.</p>
           </form>
           <div class="custom-library">
             <div class="custom-range-line"><strong>Saved custom block library</strong><button class="custom-tool-button secondary" id="refreshCustomLibrary" type="button">Refresh</button></div>
