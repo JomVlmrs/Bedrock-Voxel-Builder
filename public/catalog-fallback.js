@@ -331,8 +331,8 @@
   async function startFallback() {
     try {
       const [blocksResponse, statesResponse] = await Promise.all([
-        fetch("/data/vanilla-blocks.json"),
-        fetch("/data/block-states.json").catch(() => null)
+        fetch("./data/vanilla-blocks.json"),
+        fetch("./data/block-states.json").catch(() => null)
       ]);
       if (!blocksResponse.ok) throw new Error("HTTP " + blocksResponse.status);
       const raw = await blocksResponse.json();
