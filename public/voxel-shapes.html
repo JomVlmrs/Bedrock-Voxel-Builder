@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f3f3">
+  <meta name="description" content="Browse Bedrock Edition vanilla voxel shape previews and identifiers.">
+  <title>Vanilla Voxel Shapes · Bedrock Voxel Builder</title>
+  <link rel="stylesheet" href="./voxel-shapes.css">
+</head>
+<body class="voxel-reference-page">
+  <div class="reference-shell">
+    <header class="reference-topbar">
+      <a class="back-link" href="./index.html" aria-label="Back to Bedrock Voxel Builder">← <span>Back to Builder</span></a>
+      <a class="source-link" href="https://wiki.bedrock.dev/blocks/vanilla-voxel-shapes" target="_blank" rel="noopener noreferrer">BEDROCK WIKI SOURCE ↗</a>
+    </header>
+
+    <main class="reference-main">
+      <section class="reference-hero" aria-labelledby="pageTitle">
+        <div class="hero-kicker"><span class="hero-mark">BV</span> BEDROCK VOXEL BUILDER <span class="kicker-divider">/</span> REFERENCE LIBRARY</div>
+        <div class="hero-title-row">
+          <div>
+            <h1 id="pageTitle">Vanilla Voxel Shapes</h1>
+            <p class="hero-subtitle">A visual catalogue of Bedrock's built-in voxel shape identifiers.</p>
+          </div>
+          <span class="experimental-tag">EXPERIMENTAL</span>
+        </div>
+        <div class="hero-meta">
+          <span class="meta-pill"><strong id="shapeTotal">59</strong> SHAPES</span>
+          <span class="meta-pill">UPDATED FOR <strong>PREVIEW 1.26.30.29</strong></span>
+          <span class="meta-pill">REFERENCE MODE</span>
+        </div>
+      </section>
+
+      <aside class="culling-note" aria-label="Important voxel shape note">
+        <span class="note-icon" aria-hidden="true">i</span>
+        <p><strong>Voxel shape ≠ visible block model.</strong> These previews show the axis-aligned culling shape used to determine which neighboring block faces are hidden. They do not replace the rendered geometry or texture.</p>
+      </aside>
+
+      <section class="catalog-section" aria-label="Voxel shape catalogue">
+        <div class="catalog-heading">
+          <div>
+            <h2>Shape catalogue</h2>
+            <p>Search identifiers, inspect the shape previews, or filter by shape family.</p>
+          </div>
+          <span id="resultCount" class="result-count" aria-live="polite">59 of 59 shapes</span>
+        </div>
+
+        <div class="catalog-controls">
+          <label class="reference-search">
+            <span aria-hidden="true">⌕</span>
+            <input id="shapeSearch" type="search" placeholder="Search shape identifiers or notes…" autocomplete="off">
+            <kbd>/</kbd>
+          </label>
+          <label class="filter-wrap">
+            <span>SHAPE FAMILY</span>
+            <select id="familyFilter">
+              <option value="all">All shape families</option>
+              <option value="shelf">Shelf directions</option>
+              <option value="bell">Bell attachments</option>
+              <option value="box">Box dimensions</option>
+              <option value="dripleaf">Dripleaf</option>
+              <option value="cake">Cake states</option>
+              <option value="composter">Composter levels</option>
+              <option value="fence">Fences & gates</option>
+              <option value="head">Wall heads</option>
+              <option value="culling">Empty & unit cube</option>
+              <option value="other">Other shapes</option>
+            </select>
+          </label>
+          <button id="clearFilters" class="clear-filters" type="button">Clear</button>
+        </div>
+
+        <div class="table-frame">
+          <table class="shape-table">
+            <thead>
+              <tr><th scope="col">Shape</th><th scope="col">Identifier</th><th scope="col">Additional Notes</th></tr>
+            </thead>
+            <tbody id="shapeRows">
+              <tr><td colspan="3" class="loading-cell">Loading vanilla voxel shapes…</td></tr>
+            </tbody>
+          </table>
+          <div id="emptyState" class="empty-state" hidden>
+            <strong>No matching shapes</strong>
+            <span>Try a different identifier or clear the family filter.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="reference-footer">
+      <span>REFERENCE DATA · 59 VANILLA VOXEL SHAPE IDENTIFIERS</span>
+      <span>Shape images and reference data: <a href="https://wiki.bedrock.dev/blocks/vanilla-voxel-shapes" target="_blank" rel="noopener noreferrer">Bedrock Wiki</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></span>
+    </footer>
+  </div>
+  <script src="./voxel-shapes.js" defer></script>
+</body>
+</html>

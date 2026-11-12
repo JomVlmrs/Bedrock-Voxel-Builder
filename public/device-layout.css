@@ -47,6 +47,34 @@
 .desktop-canvas-hint { display: inline; }
 .mobile-canvas-hint { display: none; }
 
+.palette-panel > .panel-heading {
+  flex-wrap: wrap;
+  row-gap: 5px;
+}
+
+.shape-reference-link {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 22px;
+  border: 1px solid #466457;
+  border-radius: 5px;
+  padding: 2px 7px;
+  background: #21332c;
+  color: #a9d8bf;
+  text-decoration: none;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.shape-reference-link:hover {
+  border-color: #79aa91;
+  background: #2b4438;
+  color: #d2f1df;
+}
+
 @media (min-width: 901px) {
   .container {
     grid-template-columns: minmax(295px, clamp(295px, 31vw, 390px)) minmax(0, 1fr);

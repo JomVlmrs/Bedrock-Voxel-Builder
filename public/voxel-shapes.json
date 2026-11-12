@@ -1,0 +1,361 @@
+{
+  "source": "https://wiki.bedrock.dev/blocks/vanilla-voxel-shapes",
+  "updatedFor": "Preview 1.26.30.29",
+  "imageLicense": "CC BY 4.0",
+  "rows": [
+    {
+      "identifier": "minecraft:anvil",
+      "category": "other",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/anvil.png"
+    },
+    {
+      "identifier": "minecraft:bell_attachment_ceiling",
+      "category": "bell",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/bell_attachment_ceiling.png"
+    },
+    {
+      "identifier": "minecraft:bell_attachment_double_wall",
+      "category": "bell",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/bell_attachment_double_wall.png"
+    },
+    {
+      "identifier": "minecraft:bell_attachment_floor",
+      "category": "bell",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/bell_attachment_floor.png"
+    },
+    {
+      "identifier": "minecraft:bell_attachment_single_wall",
+      "category": "bell",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/bell_attachment_single_wall.png"
+    },
+    {
+      "identifier": "minecraft:big_dripleaf",
+      "category": "dripleaf",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/big_dripleaf.png"
+    },
+    {
+      "identifier": "minecraft:big_dripleaf_tilt_full",
+      "category": "dripleaf",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/big_dripleaf_tilt_full.png"
+    },
+    {
+      "identifier": "minecraft:big_dripleaf_tilt_partial",
+      "category": "dripleaf",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/big_dripleaf_tilt_partial.png"
+    },
+    {
+      "identifier": "minecraft:box_16x1x16",
+      "category": "box",
+      "notes": "A single 16×1×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x1x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x2x16",
+      "category": "box",
+      "notes": "A single 16×2×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x2x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x4x16",
+      "category": "box",
+      "notes": "A single 16×4×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x4x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x6x16",
+      "category": "box",
+      "notes": "A single 16×6×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x6x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x8x16",
+      "category": "box",
+      "notes": "A single 16×8×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x8x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x9x16",
+      "category": "box",
+      "notes": "A single 16×9×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x9x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x10x16",
+      "category": "box",
+      "notes": "A single 16×10×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x10x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x12x16",
+      "category": "box",
+      "notes": "A single 16×12×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x12x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x13x16",
+      "category": "box",
+      "notes": "A single 16×13×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x13x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x14x16",
+      "category": "box",
+      "notes": "A single 16×14×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x14x16.png"
+    },
+    {
+      "identifier": "minecraft:box_16x15x16",
+      "category": "box",
+      "notes": "A single 16×15×16 pixel box, taking up space from the bottom of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/box_16x15x16.png"
+    },
+    {
+      "identifier": "minecraft:cactus",
+      "category": "other",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cactus.png"
+    },
+    {
+      "identifier": "minecraft:cake_bites_0",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cake_bites_0.png"
+    },
+    {
+      "identifier": "minecraft:cake_bites_1",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cake_bites_1.png"
+    },
+    {
+      "identifier": "minecraft:cake_bites_2",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cake_bites_2.png"
+    },
+    {
+      "identifier": "minecraft:cake_bites_3",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cake_bites_3.png"
+    },
+    {
+      "identifier": "minecraft:cake_bites_4",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cake_bites_4.png"
+    },
+    {
+      "identifier": "minecraft:cake_bites_5",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cake_bites_5.png"
+    },
+    {
+      "identifier": "minecraft:cake_bites_6",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/cake_bites_6.png"
+    },
+    {
+      "identifier": "minecraft:candle_cake",
+      "category": "cake",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/candle_cake.png"
+    },
+    {
+      "identifier": "minecraft:chest_type_single",
+      "category": "other",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/chest_type_single.png"
+    },
+    {
+      "identifier": "minecraft:composter",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter.png"
+    },
+    {
+      "identifier": "minecraft:composter_level_1",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter_level_1.png"
+    },
+    {
+      "identifier": "minecraft:composter_level_2",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter_level_2.png"
+    },
+    {
+      "identifier": "minecraft:composter_level_3",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter_level_3.png"
+    },
+    {
+      "identifier": "minecraft:composter_level_4",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter_level_4.png"
+    },
+    {
+      "identifier": "minecraft:composter_level_5",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter_level_5.png"
+    },
+    {
+      "identifier": "minecraft:composter_level_6",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter_level_6.png"
+    },
+    {
+      "identifier": "minecraft:composter_level_7",
+      "category": "composter",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/composter_level_7.png"
+    },
+    {
+      "identifier": "minecraft:empty",
+      "category": "culling",
+      "notes": "An empty shape that contains no boxes. The default culling shape for blocks not using the minecraft:geometry.full_block model. Hardcoded — this voxel shape is not data-driven so cannot be found as a JSON file in the vanilla behavior pack.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/empty.png"
+    },
+    {
+      "identifier": "minecraft:end_portal_frame_eye",
+      "category": "other",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/end_portal_frame_eye.png"
+    },
+    {
+      "identifier": "minecraft:fence",
+      "category": "fence",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/fence.png"
+    },
+    {
+      "identifier": "minecraft:fence_gate_in_wall_occlusion",
+      "category": "fence",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/fence_gate_in_wall_occlusion.png"
+    },
+    {
+      "identifier": "minecraft:fence_gate_occlusion",
+      "category": "fence",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/fence_gate_occlusion.png"
+    },
+    {
+      "identifier": "minecraft:grindstone",
+      "category": "other",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/grindstone.png"
+    },
+    {
+      "identifier": "minecraft:heavy_core",
+      "category": "other",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/heavy_core.png"
+    },
+    {
+      "identifier": "minecraft:lectern",
+      "category": "other",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/lectern.png"
+    },
+    {
+      "identifier": "minecraft:piglin_wall_head_facing_east",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/piglin_wall_head_facing_east.png"
+    },
+    {
+      "identifier": "minecraft:piglin_wall_head_facing_north",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/piglin_wall_head_facing_north.png"
+    },
+    {
+      "identifier": "minecraft:piglin_wall_head_facing_south",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/piglin_wall_head_facing_south.png"
+    },
+    {
+      "identifier": "minecraft:piglin_wall_head_facing_west",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/piglin_wall_head_facing_west.png"
+    },
+    {
+      "identifier": "minecraft:shelf_facing_east",
+      "category": "shelf",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/shelf_facing_east.png"
+    },
+    {
+      "identifier": "minecraft:shelf_facing_north",
+      "category": "shelf",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/shelf_facing_north.png"
+    },
+    {
+      "identifier": "minecraft:shelf_facing_south",
+      "category": "shelf",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/shelf_facing_south.png"
+    },
+    {
+      "identifier": "minecraft:shelf_facing_west",
+      "category": "shelf",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/shelf_facing_west.png"
+    },
+    {
+      "identifier": "minecraft:slab_type_top",
+      "category": "other",
+      "notes": "A single 16×8×16 pixel box, taking up space from the top of the block unit.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/slab_type_top.png"
+    },
+    {
+      "identifier": "minecraft:unit_cube",
+      "category": "culling",
+      "notes": "A single 16×16×16 pixel cube, taking up the space of the full block unit. All blocks using the minecraft:geometry.full_block model are forced to use this voxel shape for culling. Hardcoded — this voxel shape is not data-driven so cannot be found as a JSON file in the vanilla behavior pack.",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/unit_cube.png"
+    },
+    {
+      "identifier": "minecraft:wall_head_facing_east",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/wall_head_facing_east.png"
+    },
+    {
+      "identifier": "minecraft:wall_head_facing_north",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/wall_head_facing_north.png"
+    },
+    {
+      "identifier": "minecraft:wall_head_facing_south",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/wall_head_facing_south.png"
+    },
+    {
+      "identifier": "minecraft:wall_head_facing_west",
+      "category": "head",
+      "notes": "",
+      "image": "https://wiki.bedrock.dev/assets/images/blocks/vanilla-voxel-shapes/wall_head_facing_west.png"
+    }
+  ]
+}
