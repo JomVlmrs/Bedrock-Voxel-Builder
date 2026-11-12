@@ -1,5 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
-const dialog = $('#customToolsDialog');
+const treeDialog = $('#treeGeneratorDialog');
+const blockDialog = $('#customBlockDialog');
 const treeForm = $('#treeGeneratorForm');
 const blockForm = $('#customBlockForm');
 const libraryList = $('#customBlockLibrary');
@@ -41,20 +42,33 @@ function waitForBuilder() {
     }, { once: true });
   });
 }
-function openDialog() {
-  if (!dialog.open) dialog.showModal();
+function openTreeDialog() {
+  if (!treeDialog.open) treeDialog.showModal();
+}
+function openBlockDialog() {
+  if (!blockDialog.open) blockDialog.showModal();
   loadCustomLibrary();
 }
-function closeDialog() {
-  if (dialog.open) dialog.close();
+function closeTreeDialog() {
+  if (treeDialog.open) treeDialog.close();
 }
-$('#openCustomTools').addEventListener('click', openDialog);
-$('#closeCustomTools').addEventListener('click', closeDialog);
-dialog.addEventListener('click', (event) => {
-  if (event.target === dialog) closeDialog();
+function closeBlockDialog() {
+  if (blockDialog.open) blockDialog.close();
+}
+$('#openTreeGenerator').addEventListener('click', openTreeDialog);
+$('#closeTreeGenerator').addEventListener('click', closeTreeDialog);
+$('#openCustomBlockImporter').addEventListener('click', openBlockDialog);
+$('#closeCustomBlockImporter').addEventListener('click', closeBlockDialog);
+treeDialog.addEventListener('click', (event) => {
+  if (event.target === treeDialog) closeTreeDialog();
+});
+blockDialog.addEventListener('click', (event) => {
+  if (event.target === blockDialog) closeBlockDialog();
 });
 window.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && dialog.open) closeDialog();
+  if (event.key !== 'Escape') return;
+  closeTreeDialog();
+  closeBlockDialog();
 });
 
 function updateRangeLabels() {
@@ -187,7 +201,7 @@ treeForm.addEventListener('submit', async (event) => {
       result.preset.label + ' tree placed at X ' + result.centerX + ', Z ' + result.centerZ +
       ' · ' + result.tree.length + ' blocks (' + logCount + ' logs, ' + leafCount + ' leaves).'
     );
-    closeDialog();
+    closeTreeDialog();
     if (window.matchMedia('(max-width: 900px)').matches) builder.setView('canvas');
   } catch (error) {
     setMessage(treeStatus, error.message || 'Tree generation failed.', true);
@@ -267,7 +281,7 @@ function renderLibrary(blocks) {
     use.textContent = 'Use block';
     use.addEventListener('click', () => {
       builder.selectBlock(block.id);
-      closeDialog();
+      closeBlockDialog();
       if (window.matchMedia('(max-width: 900px)').matches) builder.setView('canvas');
     });
     const remove = document.createElement('button');
