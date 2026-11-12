@@ -309,19 +309,14 @@ blockForm.addEventListener('submit', async (event) => {
     const blockId = $('#customBlockId').value.trim().toLowerCase();
     const blockName = $('#customBlockName').value.trim();
     const modelFile = $('#customBlockModel').files[0];
-    const textureFiles = [...$('#customBlockTextures').files];
-    const renderMode = $('#customBlockRenderMode').value;
+    const textureFile = $('#customBlockTexture').files[0];
     if (!validateBlockId(blockId)) throw new Error('Use a namespaced ID such as custom:ancient_oak.');
-    if (!blockName || blockName.length > 80) throw new Error('Enter a block name up to 80 characters.');
+    if (!blockName || blockName.length > 80) throw new Error('Enter a display name up to 80 characters.');
     if (!modelFile || modelFile.size > 2 * 1024 * 1024) throw new Error('Choose one .geo.json model file (maximum 2 MB).');
-    if (!textureFiles.length) throw new Error('Choose at least one PNG, JPG, or WebP texture.');
-    if (textureFiles.length > 16) throw new Error('Upload up to 16 texture files per block.');
-    const totalTextureBytes = textureFiles.reduce((total, file) => total + file.size, 0);
-    if (textureFiles.some((file) => file.size > 5 * 1024 * 1024) || totalTextureBytes > 12 * 1024 * 1024) {
-      throw new Error('Textures must be 5 MB each or less and 12 MB total or less.');
-    }
-    if (textureFiles.some((file) => !/\.(png|jpe?g|webp)$/i.test(file.name))) {
-      throw new Error('Only PNG, JPG, and WebP textures are supported.');
+    if (!textureFile) throw new Error('Choose one block texture image.');
+    if (textureFile.size > 5 * 1024 * 1024) throw new Error('The block texture must be 5 MB or smaller.');
+    if (!/\.(png|jpe?g|webp)$/i.test(textureFile.name)) {
+      throw new Error('The block texture must be a PNG, JPG, or WebP image.');
     }
     let model;
     try { model = JSON.parse(await modelFile.text()); }
@@ -332,15 +327,15 @@ blockForm.addEventListener('submit', async (event) => {
     const formData = new FormData();
     formData.append('blockId', blockId);
     formData.append('blockName', blockName);
-    formData.append('renderMode', renderMode);
     formData.append('model', modelFile, modelFile.name);
-    for (const texture of textureFiles) formData.append('textures', texture, texture.name);
+    formData.append('textures', textureFile, textureFile.name);
     const response = await fetch('/api/custom-blocks', { method: 'POST', body: formData });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'The custom block upload failed.');
     registerLibraryBlock(payload.block);
+    builder.selectBlock(payload.block.id);
     blockForm.reset();
-    setMessage(importStatus, 'Saved ' + payload.block.id + ' to your custom block library.');
+    setMessage(importStatus, 'Saved and selected ' + payload.block.id + '. Its model and textures are ready to place from the block palette.');
     await loadCustomLibrary();
   } catch (error) {
     setMessage(importStatus, error.message || 'The custom block import failed.', true);
