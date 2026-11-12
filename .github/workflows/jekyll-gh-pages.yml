@@ -78,7 +78,7 @@ jobs:
           html = root / "index.html"
           if html.is_file():
               source = html.read_text(encoding="utf-8")
-              for ref in re.findall(r'''(?:src|href)\\s*=\\s*["']([^"']+)["']''', source, re.I):
+              for ref in re.findall(r'''(?:src|href)\s*=\s*["']([^"']+)["']''', source, re.I):
                   check_ref(html, ref)
 
           for path in root.rglob("*"):
@@ -86,22 +86,22 @@ jobs:
                   continue
               if path.suffix in (".js", ".mjs"):
                   source = path.read_text(encoding="utf-8")
-                  for ref in re.findall(r'''(?:from\\s*|import\\s*\\()\\s*["']([^"']+)["']''', source):
+                  for ref in re.findall(r'''(?:from\s*|import\s*\()\s*["']([^"']+)["']''', source):
                       if ref.startswith("."):
                           check_ref(path, ref)
-                  for ref in re.findall(r'''new URL\\(\\s*["']([^"']+)["']''', source):
+                  for ref in re.findall(r'''new URL\(\s*["']([^"']+)["']''', source):
                       if ref.startswith("."):
                           check_ref(path, ref)
               elif path.suffix == ".css":
                   source = path.read_text(encoding="utf-8")
-                  for ref in re.findall(r'''url\\(\\s*["']?([^"')]+)''', source, re.I):
+                  for ref in re.findall(r'''url\(\s*["']?([^"')]+)''', source, re.I):
                       check_ref(path, ref)
-                  for ref in re.findall(r'''@import\\s+["']([^"']+)["']''', source, re.I):
+                  for ref in re.findall(r'''@import\s+["']([^"']+)["']''', source, re.I):
                       check_ref(path, ref)
 
           if errors:
               print("Static file connection check failed:")
-              print("\\n".join(f"- {error}" for error in errors))
+              print("\n".join(f"- {error}" for error in errors))
               sys.exit(1)
 
           print(f"Static file connection check passed ({len(checked)} local references checked).")
@@ -129,11 +129,11 @@ jobs:
                   continue
               source = path.read_text(encoding="utf-8")
               if path.suffix.lower() == ".html":
-                  source = re.sub(r'''((?:src|href)\\s*=\\s*["'])/(?!/)''', r"\\1./", source, flags=re.I)
+                  source = re.sub(r'''((?:src|href)\s*=\s*["'])/(?!/)''', r"\1./", source, flags=re.I)
               elif path.suffix.lower() in {".js", ".mjs"}:
-                  source = re.sub(r'''(["'`])/data/''', r"\\1./data/", source)
+                  source = re.sub(r'''(["'])/data/''', r"\1./data/", source)
               elif path.suffix.lower() == ".css":
-                  source = re.sub(r'''(url\\(\\s*["']?)/(?!/)''', r"\\1./", source, flags=re.I)
+                  source = re.sub(r'''(url\(\s*["']?)/(?!/)''', r"\1./", source, flags=re.I)
               path.write_text(source, encoding="utf-8")
 
           html = (root / "index.html").read_text(encoding="utf-8")
@@ -159,7 +159,7 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: \${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
