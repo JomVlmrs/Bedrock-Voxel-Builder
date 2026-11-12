@@ -71,7 +71,8 @@
           <option value="partial">Partial shapes</option>
           <option value="non-solid">Non-solid models</option>
         </select>
-        <button id="openCustomTools" class="custom-tools-launch catalog-tools-launch" type="button" title="Open the tree generator and custom block importer">TREE + CUSTOM BLOCKS</button>
+        <button id="openTreeGenerator" class="custom-tools-launch catalog-tools-launch catalog-tool-tree" type="button" title="Open the tree generator">♣ TREE GENERATOR</button>
+        <button id="openCustomBlockImporter" class="custom-tools-launch catalog-tools-launch catalog-tool-import" type="button" title="Open the custom block importer">▦ IMPORT CUSTOM BLOCK</button>
         <button id="importStructureCatalog" class="text-button structure-import-action catalog-tools-launch mobile-import-launch" type="button" title="Import a Bedrock .mcstructure or .mcfunction file">IMPORT STRUCTURE FILE ↑</button>
         <div class="selected-block" id="selectedBlock">
           <span class="selected-thumb" id="selectedThumb">▧</span>
@@ -213,14 +214,14 @@
       </div>
     </div>
   </footer>
-  <dialog id="customToolsDialog" class="custom-tools-dialog" aria-labelledby="customToolsTitle">
+  <dialog id="treeGeneratorDialog" class="custom-tools-dialog tree-generator-dialog" aria-labelledby="treeGeneratorTitle">
     <div class="custom-tools-shell">
       <header class="custom-tools-header">
         <div>
-          <h2 id="customToolsTitle">Tree Studio &amp; Custom Blocks</h2>
-          <p>Generate natural tree structures or add your own Bedrock geometry assets.</p>
+          <h2 id="treeGeneratorTitle">Tree Generator</h2>
+          <p>Configure a tree and place its editable vanilla blocks in your workspace.</p>
         </div>
-        <button id="closeCustomTools" class="custom-tools-close" type="button" aria-label="Close custom tools">×</button>
+        <button id="closeTreeGenerator" class="custom-tools-close" type="button" aria-label="Close tree generator">×</button>
       </header>
       <div class="custom-tools-content">
         <section class="custom-tool-card" aria-labelledby="treeToolTitle">
@@ -285,8 +286,24 @@
           </div>
         </section>
 
+        <!-- Custom block importer moved into its own dialog below. -->
+      </div>
+      <footer class="custom-tools-footer">Tree parts are placed as real vanilla blocks. You can edit and export the trunk, branches and leaves individually.</footer>
+    </div>
+  </dialog>
+
+  <dialog id="customBlockDialog" class="custom-tools-dialog custom-block-dialog" aria-labelledby="customBlockDialogTitle">
+    <div class="custom-tools-shell">
+      <header class="custom-tools-header">
+        <div>
+          <h2 id="customBlockDialogTitle">Import Custom Block</h2>
+          <p>Add a Bedrock geometry model and its texture to your block catalogue.</p>
+        </div>
+        <button id="closeCustomBlockImporter" class="custom-tools-close" type="button" aria-label="Close custom block importer">×</button>
+      </header>
+      <div class="custom-tools-content">
         <section class="custom-tool-card" aria-labelledby="blockImportTitle">
-          <h3 id="blockImportTitle">Import custom block</h3>
+          <h3 id="blockImportTitle">Block details and assets</h3>
           <p class="custom-tool-lead">Enter the block identifier and its display-only name, then select the Bedrock geometry model and one texture image. Files are saved to your private project library.</p>
           <form id="customBlockForm" class="custom-tool-form">
             <label class="custom-field">
@@ -319,7 +336,7 @@
           </div>
         </section>
       </div>
-      <footer class="custom-tools-footer">Uploads are stored in this project’s private Hatchable storage. You can select imported blocks from the catalogue and place them like vanilla blocks. Tree blocks export to .mcfunction and .mcstructure files.</footer>
+      <footer class="custom-tools-footer">Imported blocks are saved in your private Hatchable library and can be selected from the catalogue for placement in your structure.</footer>
     </div>
   </dialog>
 
