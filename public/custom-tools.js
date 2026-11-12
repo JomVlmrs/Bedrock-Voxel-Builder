@@ -8,6 +8,8 @@ const importStatus = $('#importStatus');
 const libraryStatus = $('#libraryStatus');
 const importButton = $('#importCustomBlock');
 const treeButton = $('#generateTree');
+const customBlocksApi = window.BEDROCK_CUSTOM_BLOCKS_API ||
+  (location.hostname.toLowerCase().endsWith('.github.io') ? null : '/api/custom-blocks');
 let builder = null;
 
 const treePresets = {
@@ -212,9 +214,15 @@ function registerLibraryBlock(block) {
 async function loadCustomLibrary() {
   await waitForBuilder();
   $('#treeDimensions').textContent = 'Workspace ' + Object.values(builder.getWorkspace()).join(' × ');
+  if (!customBlocksApi) {
+    renderLibrary([]);
+    importButton.disabled = true;
+    setMessage(libraryStatus, 'Custom block storage needs a backend. The static GitHub Pages editor supports building and exporting, but not custom block uploads or cloud sync.');
+    return;
+  }
   setMessage(libraryStatus, 'Loading your saved custom blocks…');
   try {
-    const response = await fetch('/api/custom-blocks');
+    const response = await fetch(customBlocksApi);
     if (response.status === 401 || response.status === 403) {
       throw new Error('Sign in as the project owner to sync custom blocks.');
     }
@@ -270,7 +278,7 @@ function renderLibrary(blocks) {
       if (!confirm('Delete ' + block.id + ' from the saved custom block library?')) return;
       remove.disabled = true;
       try {
-        const response = await fetch('/api/custom-blocks?id=' + encodeURIComponent(block.id), { method: 'DELETE' });
+        const response = await fetch(customBlocksApi + '?id=' + encodeURIComponent(block.id), { method: 'DELETE' });
         if (!response.ok) throw new Error('Could not remove this custom block.');
         builder.removeCustomBlock(block.id);
         loadCustomLibrary();
@@ -291,6 +299,7 @@ blockForm.addEventListener('submit', async (event) => {
   setMessage(importStatus, 'Checking model and uploading assets…');
   try {
     await waitForBuilder();
+    if (!customBlocksApi) throw new Error('Custom block uploads require the Hatchable backend; they are not supported on static GitHub Pages.');
     const blockId = $('#customBlockId').value.trim().toLowerCase();
     const blockName = $('#customBlockName').value.trim();
     const modelFile = $('#customBlockModel').files[0];
@@ -320,7 +329,7 @@ blockForm.addEventListener('submit', async (event) => {
     formData.append('renderMode', renderMode);
     formData.append('model', modelFile, modelFile.name);
     for (const texture of textureFiles) formData.append('textures', texture, texture.name);
-    const response = await fetch('/api/custom-blocks', { method: 'POST', body: formData });
+    const response = await fetch(customBlocksApi, { method: 'POST', body: formData });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'The custom block upload failed.');
     registerLibraryBlock(payload.block);
