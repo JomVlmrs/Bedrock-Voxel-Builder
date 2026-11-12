@@ -107,7 +107,7 @@
         <table class="catalog-table">
           <thead>
             <tr>
-              <th class="texture-col">TEX</th>
+              <th class="texture-col" title="Minecraft Wiki isometric block sprite, with Mojang texture fallback">ICON</th>
               <th>BLOCK IDENTIFIER</th>
               <th class="shape-col">SHAPE</th>
               <th class="count-col">USED</th>
@@ -120,7 +120,7 @@
       </div>
       <div class="catalog-bottom">
         <span id="filteredCount">0 blocks shown</span>
-        <span>MOJANG VANILLA SAMPLES</span>
+        <a class="block-icon-source" href="https://minecraft.fandom.com/wiki/Category:Blocks" target="_blank" rel="noopener noreferrer" title="Block icon reference: Minecraft Fandom Category: Blocks">MINECRAFT BLOCK ICON SOURCE ↗</a>
       </div>
     </aside>
 
@@ -345,5 +345,6 @@
   <script type="module" src="./builder.js"></script>
   <script type="module" src="./custom-tools.js"></script>
   <script defer src="./visitor-tracker.js"></script>
+  <script defer src="./block-icons.js"></script>
 </body>
 </html>

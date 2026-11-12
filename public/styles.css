@@ -144,6 +144,35 @@ button { color: inherit; }
   image-rendering: pixelated;
 }
 .block-texture-fallback { display: inline-grid; place-items: center; width: 25px; height: 25px; border-radius: 4px; background: #354145; color: #9eafaa; font-size: 12px; }
+.block-texture.wiki-block-sprite {
+  object-fit: contain;
+  border-color: rgba(255,255,255,.07);
+  background: #273134;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.saved-palette-choice img.wiki-block-sprite {
+  object-fit: contain;
+  background: #273134;
+  image-rendering: pixelated;
+}
+.selected-thumb.is-wiki-sprite {
+  background-position: center !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-blend-mode: normal !important;
+}
+.block-icon-source {
+  display: inline-flex;
+  align-items: center;
+  color: #8fa89a;
+  text-decoration: none;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.block-icon-source:hover { color: #c1dfce; text-decoration: underline; }
 .block-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d9e1e2; font-size: 9px; }
 .shape-tag { display: inline-block; max-width: 59px; overflow: hidden; border: 1px solid #3e494e; border-radius: 4px; padding: 3px 4px; text-overflow: ellipsis; white-space: nowrap; color: #91a0a3; font-size: 7px; }
 .shape-tag.non-solid { border-color: #485448; color: #a6bc9e; }
