@@ -2530,10 +2530,10 @@ async function downloadStructure() {
 async function loadVanillaData() {
   setStatus("Loading Mojang vanilla block and texture data…");
   const [blocksResponse, texturesResponse, versionResponse, statesResponse] = await Promise.all([
-    fetch("/data/vanilla-blocks.json"),
-    fetch("/data/terrain_texture.json").catch(() => null),
-    fetch("/data/sample-version.json").catch(() => null),
-    fetch("/data/block-states.json").catch(() => null)
+    fetch("./data/vanilla-blocks.json"),
+    fetch("./data/terrain_texture.json").catch(() => null),
+    fetch("./data/sample-version.json").catch(() => null),
+    fetch("./data/block-states.json").catch(() => null)
   ]);
   if (!blocksResponse.ok) {
     throw new Error("The Mojang vanilla block catalogue could not be loaded (HTTP " + blocksResponse.status + ").");
@@ -2581,10 +2581,10 @@ async function loadVanillaData() {
   const latestDate = versionData.latest?.date || "";
   window.__BEDROCK_SAMPLE_VERSION__ = `SAMPLES ${latestVersion}${latestDate ? ` · ${latestDate}` : ""}`;
   const publishedModels = {
-    shelf_mushroom_small: "/data/models/shelf_mushroom_small.geo.json",
-    shelf_mushroom_large: "/data/models/shelf_mushroom_large.geo.json",
-    straw_bed_foot: "/data/models/straw_bed_foot.geo.json",
-    straw_bed_head: "/data/models/straw_bed_head.geo.json"
+    shelf_mushroom_small: "./data/models/shelf_mushroom_small.geo.json",
+    shelf_mushroom_large: "./data/models/shelf_mushroom_large.geo.json",
+    straw_bed_foot: "./data/models/straw_bed_foot.geo.json",
+    straw_bed_head: "./data/models/straw_bed_head.geo.json"
   };
   const modelResults = await Promise.all(Object.entries(publishedModels).map(async ([name, path]) => {
     try {
