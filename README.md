@@ -6,7 +6,7 @@ This folder is a complete Hatchable project. Everything the app needs is in thes
 
 ## Run your own copy
 
-1. Go to https://hatchable.com/deploy
+1. Go to (https://github.com/JomVlmrs/Bedrock-Voxel-Builder/releases/tag/Open-Source)
 2. Bring this folder as a .zip, or point the importer at a Git repository that contains it
 3. Your copy gets its own database, its own URL, and connects to your own keys
 
