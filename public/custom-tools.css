@@ -1,0 +1,119 @@
+/* Custom tree and block tools */
+.custom-tools-launch {
+  min-height: 32px;
+  border: 1px solid #648679;
+  border-radius: 7px;
+  padding: 6px 10px;
+  background: #263d35;
+  color: #d8f2e7;
+  font: 700 10px/1.2 "IBM Plex Mono", monospace;
+  letter-spacing: .03em;
+  cursor: pointer;
+}
+.custom-tools-launch:hover { background: #315347; }
+.custom-tools-dialog {
+  width: min(980px, calc(100vw - 36px));
+  max-width: 980px;
+  max-height: min(90dvh, 900px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #526960;
+  border-radius: 15px;
+  background: #182321;
+  color: #e4eee9;
+  box-shadow: 0 28px 90px #000b;
+}
+.custom-tools-dialog::backdrop { background: #07100ed9; backdrop-filter: blur(4px); }
+.custom-tools-shell { display: flex; max-height: min(90dvh, 900px); flex-direction: column; }
+.custom-tools-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 17px 20px; border-bottom: 1px solid #344842; background: #1d2b27;
+}
+.custom-tools-header h2 { margin: 0; color: #f0f5f2; font-size: 18px; letter-spacing: -.025em; }
+.custom-tools-header p { margin: 4px 0 0; color: #9eb2a9; font-size: 11px; }
+.custom-tools-close {
+  width: 38px; height: 38px; flex: 0 0 38px; border: 1px solid #455a51;
+  border-radius: 8px; background: #253530; color: #e2eee8; font-size: 21px; cursor: pointer;
+}
+.custom-tools-content {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px; padding: 16px; overflow: auto; overscroll-behavior: contain;
+}
+.custom-tool-card {
+  min-width: 0; padding: 15px; border: 1px solid #344a41; border-radius: 11px;
+  background: #1d2b27;
+}
+.custom-tool-card h3 { margin: 0 0 5px; font-size: 14px; color: #e6f1eb; }
+.custom-tool-lead { margin: 0 0 14px; color: #9eb1a8; font-size: 11px; line-height: 1.5; }
+.custom-tool-form { display: grid; gap: 11px; }
+.custom-field { display: grid; min-width: 0; gap: 5px; }
+.custom-field > span { color: #bdcec5; font-size: 10px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.custom-field input:not([type="file"]):not([type="range"]),
+.custom-field select {
+  width: 100%; min-width: 0; height: 40px; border: 1px solid #40564d; border-radius: 7px;
+  padding: 0 10px; background: #131d1a; color: #e4eee9; font: 13px "IBM Plex Mono", monospace;
+}
+.custom-field input[type="file"] {
+  width: 100%; min-width: 0; min-height: 43px; border: 1px dashed #547266; border-radius: 7px;
+  padding: 8px; background: #15211d; color: #b7c9c0; font-size: 11px;
+}
+.custom-field input[type="range"] { width: 100%; accent-color: #91d7b9; }
+.custom-field select:focus-visible,
+.custom-field input:focus-visible,
+.custom-tool-button:focus-visible,
+.custom-tools-close:focus-visible { outline: 2px solid #a5e6c8; outline-offset: 2px; }
+.custom-range-line { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.custom-range-line output { color: #a5e6c8; font: 700 11px "IBM Plex Mono", monospace; }
+.custom-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.custom-help { margin: 0; color: #82988e; font-size: 10px; line-height: 1.5; }
+.custom-tool-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 43px; border: 1px solid #709986; border-radius: 8px;
+  padding: 9px 13px; background: #b0e8ce; color: #152b22; font-size: 12px;
+  font-weight: 800; cursor: pointer; touch-action: manipulation;
+}
+.custom-tool-button:hover { background: #c4f2db; }
+.custom-tool-button:disabled { opacity: .5; cursor: wait; }
+.custom-tool-button.secondary { border-color: #53685e; background: #293a33; color: #d4e5dc; }
+.custom-tool-button.danger { border-color: #76554e; background: #472f2c; color: #f2c5bb; }
+.custom-tree-summary {
+  min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 11px; border: 1px solid #354d42; border-radius: 8px; padding: 10px;
+  background: #17231f;
+}
+.custom-tree-summary strong { display: block; color: #dff0e7; font-size: 12px; }
+.custom-tree-summary span { display: block; margin-top: 4px; color: #91a89c; font-size: 10px; line-height: 1.45; }
+.custom-tree-mark { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 36px; border-radius: 8px; background: #2d493c; color: #b0e8ce; font-size: 21px; }
+.custom-status { min-height: 17px; color: #a7c4b5; font-size: 10px; line-height: 1.5; }
+.custom-status.error { color: #f0a99e; }
+.custom-library { display: grid; gap: 7px; margin-top: 12px; }
+.custom-library-item {
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto; align-items: center; gap: 8px;
+  min-width: 0; border: 1px solid #344940; border-radius: 8px; padding: 7px; background: #16211e;
+}
+.custom-library-thumb { width: 36px; height: 36px; object-fit: cover; image-rendering: pixelated; border-radius: 5px; background: #263a32; }
+.custom-library-copy { min-width: 0; }
+.custom-library-copy strong { display: block; color: #dcece4; font-size: 11px; overflow-wrap: anywhere; }
+.custom-library-copy small { display: block; margin-top: 3px; color: #83998f; font: 9px "IBM Plex Mono", monospace; overflow-wrap: anywhere; }
+.custom-library-item button { min-height: 34px; border: 1px solid #526b60; border-radius: 6px; padding: 5px 8px; background: #25372f; color: #d2e5db; font-size: 10px; cursor: pointer; }
+.custom-library-item button:disabled { opacity: .4; cursor: not-allowed; }
+.custom-library-empty { padding: 13px; border: 1px dashed #425b50; border-radius: 8px; color: #8da398; text-align: center; font-size: 11px; line-height: 1.5; }
+.custom-tools-footer { padding: 10px 18px; border-top: 1px solid #344842; color: #84998f; font-size: 10px; line-height: 1.5; }
+@media (max-width: 720px) {
+  .custom-tools-dialog {
+    width: 100vw; max-width: none; max-height: 100dvh; height: 100dvh;
+    border-radius: 0; border-left: 0; border-right: 0;
+  }
+  .custom-tools-shell { max-height: 100dvh; height: 100%; }
+  .custom-tools-header { padding: max(12px, env(safe-area-inset-top)) 14px 12px; }
+  .custom-tools-header h2 { font-size: 16px; }
+  .custom-tools-content { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 10px; }
+  .custom-tool-card { padding: 12px; }
+  .custom-tool-button { width: 100%; min-height: 46px; }
+  .custom-tools-footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 360px) {
+  .custom-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .custom-library-item { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .custom-library-item .custom-delete { grid-column: 2 / -1; justify-self: end; }
+}
