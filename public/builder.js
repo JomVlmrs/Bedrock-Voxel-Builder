@@ -444,14 +444,14 @@ function modelTypeForBlock(id) {
   if (name.includes("candle")) return "candle";
   if (name.includes("scaffolding")) return "scaffolding";
   if (name.includes("pointed_dripstone")) return "dripstone";
-  if (name.includes("amethyst_cluster") || name.includes("amethyst_bud")) return "cluster";
+  if (name.includes("amethyst_cluster") || name.includes("amethyst_bud")) return "cross";
   if (name.includes("turtle_egg") || name.includes("egg")) return "egg";
   if (name.includes("cobweb")) return "cross";
   return "cube";
 }
 function shapeClass(type) {
   if (type === "cube" || type === "log") return "solid";
-  if (["slab","stairs","fence","gate","wall","pane","door","trapdoor","container","hopper","cactus","anvil","bell","composter","lectern","grindstone","head","cake","scaffolding","dripstone","cluster","egg","mushroom_shelf","shelf","straw_bed"].includes(type)) return "partial";
+  if (["slab","stairs","fence","gate","wall","pane","door","trapdoor","container","hopper","cactus","anvil","bell","composter","lectern","grindstone","head","cake","scaffolding","dripstone","egg","mushroom_shelf","shelf","straw_bed"].includes(type)) return "partial";
   return "non-solid";
 }
 function shapeLabel(type) {
@@ -464,7 +464,7 @@ function shapeLabel(type) {
     composter:"Composter", lectern:"Lectern", grindstone:"Grindstone",
     container:"Container", hopper:"Hopper", head:"Head", cake:"Cake",
     candle:"Candle", scaffolding:"Scaffold", dripstone:"Dripstone",
-    cluster:"Cluster", egg:"Egg", mushroom_shelf:"Mushroom shelf", shelf:"Shelf", straw_bed:"Straw bed"
+    egg:"Egg", mushroom_shelf:"Mushroom shelf", shelf:"Shelf", straw_bed:"Straw bed"
   };
   return labels[type] || "Full cube";
 }
@@ -921,6 +921,7 @@ function renderMethodForBlock(blockId) {
   if (/(glass|water|lava|ice|beacon|honey|slime|portal|bubble_column)/.test(name)) return "blend";
   if (/leaves/.test(name)) return "alpha_test_to_opaque";
   if (/(bamboo|kelp|sugar_cane)/.test(name)) return "alpha_test_single_sided_to_opaque";
+  if (/amethyst_(?:cluster|bud)/.test(name)) return "alpha_test_single_sided";
   if (["plant", "sapling"].includes(modelTypeForBlock(name))) return "alpha_test_single_sided";
   if (/(door|trapdoor|sapling|flower|tulip|orchid|allium|poppy|dandelion|cornflower|grass|fern|deadbush|bush|shrub|roots|sprouts|seagrass|vine|glow_lichen|spore_blossom|hanging_roots|azalea|wither_rose|wheat|carrots|potatoes|beetroots|sweet_berry_bush|mushroom|chorus|reeds|cocoa|fire|coral_fan|sea_pickle|dripleaf|cobweb|candle|rail|straw_bed)/.test(name)) {
     return "alpha_test_single_sided";
