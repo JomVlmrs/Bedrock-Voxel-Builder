@@ -409,7 +409,9 @@ function modelTypeForBlock(id) {
   if (/(^|_)(water|lava)$/.test(name) || name.startsWith("flowing_water") || name.startsWith("flowing_lava")) return "fluid";
   if (/(^|_)sapling$/.test(name) || name === "mangrove_propagule") return "sapling";
   if (/^(?:dandelion|poppy|blue_orchid|allium|azure_bluet|red_tulip|orange_tulip|white_tulip|pink_tulip|oxeye_daisy|cornflower|lily_of_the_valley|wither_rose|cactus_flower|torchflower|sunflower|lilac|rose_bush|peony|open_eyeblossom|closed_eyeblossom|wildflowers|pink_petals|short_grass|tall_grass|short_dry_grass|tall_dry_grass|tallgrass|fern|large_fern|deadbush|brown_mushroom|red_mushroom|crimson_roots|warped_roots|nether_sprouts|crimson_fungus|warped_fungus|seagrass|tall_seagrass|kelp|sugar_cane|azalea|flowering_azalea|sweet_berry_bush|wheat|carrots|potatoes|beetroot|beetroots|nether_wart|pitcher_plant|pitcher_crop|torchflower_crop|melon_stem|pumpkin_stem|double_plant|red_flower|yellow_flower)$/.test(name)) return "plant";
-  if (/(vine|glow_lichen|spore_blossom|hanging_roots|chorus_flower|chorus_plant|reeds|cocoa|fire|coral_fan|sea_pickle|dripleaf)/.test(name) || name === "cobweb") return "cross";
+  // Keep the original vanilla fallback coverage for non-crop vegetation and fungi.
+  // Dedicated plant/sapling matches above remain separate and keep their full-size preview.
+  if (/(flower|tulip|orchid|allium|poppy|dandelion|cornflower|lily_of_the_valley|grass|fern|deadbush|bush|shrub|roots|sprouts|seagrass|kelp|vine|glow_lichen|spore_blossom|hanging_roots|azalea|wither_rose|wheat|carrots|potatoes|beetroots|sweet_berry_bush|crimson_roots|warped_roots|nether_sprouts|mushroom|chorus_flower|chorus_plant|reeds|sugar_cane|cocoa|fire|coral_fan|sea_pickle|dripleaf)/.test(name) || name === "cobweb") return "cross";
   if (/(^|_)(log|stem|hyphae)$/.test(name) || name.endsWith("_log")) return "log";
   if (name.includes("double_slab")) return "cube";
   if (name.includes("slab")) return "slab";
@@ -920,7 +922,7 @@ function renderMethodForBlock(blockId) {
   if (/leaves/.test(name)) return "alpha_test_to_opaque";
   if (/(bamboo|kelp|sugar_cane)/.test(name)) return "alpha_test_single_sided_to_opaque";
   if (["plant", "sapling"].includes(modelTypeForBlock(name))) return "alpha_test_single_sided";
-  if (/(door|trapdoor|vine|glow_lichen|spore_blossom|hanging_roots|chorus|reeds|cocoa|fire|coral_fan|sea_pickle|dripleaf|cobweb|candle|rail|straw_bed)/.test(name)) {
+  if (/(door|trapdoor|sapling|flower|tulip|orchid|allium|poppy|dandelion|cornflower|grass|fern|deadbush|bush|shrub|roots|sprouts|seagrass|vine|glow_lichen|spore_blossom|hanging_roots|azalea|wither_rose|wheat|carrots|potatoes|beetroots|sweet_berry_bush|mushroom|chorus|reeds|cocoa|fire|coral_fan|sea_pickle|dripleaf|cobweb|candle|rail|straw_bed)/.test(name)) {
     return "alpha_test_single_sided";
   }
   if (/(ladder|monster_spawner|spawner)/.test(name)) return "alpha_test";
@@ -1267,7 +1269,9 @@ function createBlockModel(group, record) {
         addBox(group, mats, 0.43, 0.08, 0.43, 0.14, 0.72, 0.14);
         addBox(group, mats, 0.39, 0.69, 0.39, 0.22, 0.16, 0.22);
       } else {
-        addCross(group, mats, 1, 1);
+        // Restore the original vanilla cross footprint. Plants and saplings use
+        // their dedicated full-size branch above.
+        addCross(group, mats, /tall|large|double_plant/.test(id) ? 1 : 0.92, 1);
       }
       return;
     case "slab": {

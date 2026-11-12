@@ -31,11 +31,13 @@
     const name = id.toLowerCase();
     if (name === "air" || name.includes("structure_void") || name === "void_air" || name === "cave_air") return "empty";
     if (name === "shelf_mushroom") return "mushroom_shelf";
+    if (name.endsWith("_shelf")) return "shelf";
     if (name === "straw_bed") return "straw_bed";
     if (/(^|_)(water|lava)$/.test(name) || name.startsWith("flowing_water") || name.startsWith("flowing_lava")) return "fluid";
     if (/(^|_)sapling$/.test(name) || name === "mangrove_propagule") return "sapling";
     if (/^(?:dandelion|poppy|blue_orchid|allium|azure_bluet|red_tulip|orange_tulip|white_tulip|pink_tulip|oxeye_daisy|cornflower|lily_of_the_valley|wither_rose|cactus_flower|torchflower|sunflower|lilac|rose_bush|peony|open_eyeblossom|closed_eyeblossom|wildflowers|pink_petals|short_grass|tall_grass|short_dry_grass|tall_dry_grass|tallgrass|fern|large_fern|deadbush|brown_mushroom|red_mushroom|crimson_roots|warped_roots|nether_sprouts|crimson_fungus|warped_fungus|seagrass|tall_seagrass|kelp|sugar_cane|azalea|flowering_azalea|sweet_berry_bush|wheat|carrots|potatoes|beetroot|beetroots|nether_wart|pitcher_plant|pitcher_crop|torchflower_crop|melon_stem|pumpkin_stem|double_plant|red_flower|yellow_flower)$/.test(name)) return "plant";
-    if (/(vine|glow_lichen|spore_blossom|hanging_roots|chorus_flower|chorus_plant|reeds|cocoa|fire|coral_fan|sea_pickle|dripleaf)/.test(name) || name === "cobweb") return "cross";
+    // Keep the original vanilla fallback coverage for non-crop vegetation and fungi.
+    if (/(flower|tulip|orchid|allium|poppy|dandelion|cornflower|grass|fern|deadbush|bush|shrub|roots|sprouts|seagrass|kelp|vine|glow_lichen|spore_blossom|hanging_roots|azalea|wither_rose|wheat|carrots|potatoes|beetroots|sweet_berry_bush|crimson_roots|warped_roots|nether_sprouts|mushroom|chorus_flower|chorus_plant|reeds|sugar_cane|cocoa|fire|coral_fan|sea_pickle|dripleaf)/.test(name) || name === "cobweb") return "cross";
     if (/(^|_)(log|stem|hyphae)$/.test(name) || name.endsWith("_log")) return "log";
     if (name.includes("double_slab")) return "cube";
     if (name.includes("slab")) return "slab";
@@ -76,7 +78,7 @@
 
   function shapeClass(type) {
     if (type === "cube" || type === "log") return "solid";
-    if (["slab", "stairs", "fence", "gate", "wall", "pane", "door", "trapdoor", "container", "hopper", "cactus", "anvil", "bell", "composter", "lectern", "grindstone", "head", "cake", "scaffolding", "dripstone", "cluster", "egg", "mushroom_shelf", "straw_bed"].includes(type)) return "partial";
+    if (["slab", "stairs", "fence", "gate", "wall", "pane", "door", "trapdoor", "container", "hopper", "cactus", "anvil", "bell", "composter", "lectern", "grindstone", "head", "cake", "scaffolding", "dripstone", "cluster", "egg", "mushroom_shelf", "shelf", "straw_bed"].includes(type)) return "partial";
     return "non-solid";
   }
 
@@ -89,7 +91,7 @@
       lantern: "Lantern", cactus: "Cactus", anvil: "Anvil", bell: "Bell", composter: "Composter",
       lectern: "Lectern", grindstone: "Grindstone", container: "Container", hopper: "Hopper",
       head: "Head", cake: "Cake", candle: "Candle", scaffolding: "Scaffold", dripstone: "Dripstone",
-      cluster: "Cluster", egg: "Egg", mushroom_shelf: "Mushroom shelf", straw_bed: "Straw bed"
+      cluster: "Cluster", egg: "Egg", mushroom_shelf: "Mushroom shelf", shelf: "Shelf", straw_bed: "Straw bed"
     };
     return labels[type] || "Full cube";
   }

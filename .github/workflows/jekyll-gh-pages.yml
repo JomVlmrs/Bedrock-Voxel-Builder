@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "public/**"
+      - "api/**"
+      - "migrations/**"
       - ".github/workflows/jekyll-gh-pages.yml"
   workflow_dispatch:
 
@@ -150,6 +152,8 @@ jobs:
           test -s ./_site/data/vanilla-blocks.json
           test -s ./_site/data/block-states.json
           test -s ./_site/data/terrain_texture.json
+          test -s ./api/custom-blocks.js
+          test -s ./migrations/0001_create_custom_blocks.sql
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
