@@ -9,6 +9,9 @@ const libraryStatus = $('#libraryStatus');
 const importButton = $('#importCustomBlock');
 const treeButton = $('#generateTree');
 let builder = null;
+// GitHub Pages is a static host; persisted custom-block uploads need Hatchable's API.
+const customBlockApiAvailable = !/\.github\.io$/i.test(location.hostname);
+const customBlockApiUrl = new URL("./api/custom-blocks", document.baseURI).href;
 
 const treePresets = {
   oak: { log: 'oak_log', leaves: 'oak_leaves', style: 'round', label: 'Oak' },
@@ -212,9 +215,17 @@ function registerLibraryBlock(block) {
 async function loadCustomLibrary() {
   await waitForBuilder();
   $('#treeDimensions').textContent = 'Workspace ' + Object.values(builder.getWorkspace()).join(' × ');
+  if (!customBlockApiAvailable) {
+    renderLibrary([]);
+    importButton.disabled = true;
+    setMessage(libraryStatus, 'Saved custom blocks and uploads are available in the Hatchable-hosted app; GitHub Pages is a static mirror.');
+    setMessage(importStatus, 'Open the Hatchable app to upload and sync custom block models and textures.');
+    return;
+  }
+  importButton.disabled = false;
   setMessage(libraryStatus, 'Loading your saved custom blocks…');
   try {
-    const response = await fetch('/api/custom-blocks');
+    const response = await fetch(customBlockApiUrl);
     if (response.status === 401 || response.status === 403) {
       throw new Error('Sign in as the project owner to sync custom blocks.');
     }
@@ -270,7 +281,7 @@ function renderLibrary(blocks) {
       if (!confirm('Delete ' + block.id + ' from the saved custom block library?')) return;
       remove.disabled = true;
       try {
-        const response = await fetch('/api/custom-blocks?id=' + encodeURIComponent(block.id), { method: 'DELETE' });
+        const response = await fetch(customBlockApiUrl + '?id=' + encodeURIComponent(block.id), { method: 'DELETE' });
         if (!response.ok) throw new Error('Could not remove this custom block.');
         builder.removeCustomBlock(block.id);
         loadCustomLibrary();
@@ -287,6 +298,10 @@ $('#refreshCustomLibrary').addEventListener('click', loadCustomLibrary);
 
 blockForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!customBlockApiAvailable) {
+    setMessage(importStatus, 'Custom block uploads require the Hatchable-hosted app. GitHub Pages is a static mirror.', true);
+    return;
+  }
   importButton.disabled = true;
   setMessage(importStatus, 'Checking model and uploading assets…');
   try {
