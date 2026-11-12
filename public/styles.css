@@ -144,6 +144,41 @@ button { color: inherit; }
   image-rendering: pixelated;
 }
 .block-texture-fallback { display: inline-grid; place-items: center; width: 25px; height: 25px; border-radius: 4px; background: #354145; color: #9eafaa; font-size: 12px; }
+.block-cross-icon {
+  --cross-plane-width: 10px;
+  --cross-plane-height: 19px;
+  position: relative;
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  overflow: visible;
+  vertical-align: middle;
+  perspective: 72px;
+}
+.block-cross-icon::before,
+.block-cross-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--cross-plane-width);
+  height: var(--cross-plane-height);
+  background-image: var(--cross-icon-texture);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.28));
+}
+.block-cross-icon::before { transform: translate(-50%, -50%) rotateY(45deg); }
+.block-cross-icon::after { transform: translate(-50%, -50%) rotateY(-45deg); }
+.block-cross-icon.is-small-amethyst-bud { --cross-plane-width: 7px; --cross-plane-height: 12px; }
+.block-cross-icon.is-medium-amethyst-bud { --cross-plane-width: 8px; --cross-plane-height: 16px; }
+.block-cross-icon.is-large-amethyst-bud { --cross-plane-width: 9px; --cross-plane-height: 19px; }
+.block-cross-icon.is-amethyst-cluster { --cross-plane-width: 11px; --cross-plane-height: 22px; }
+.block-cross-icon::before { z-index: 1; }
+.block-cross-icon::after { z-index: 2; }
 .block-texture.wiki-block-sprite {
   object-fit: contain;
   border-color: rgba(255,255,255,.07);
@@ -156,12 +191,46 @@ button { color: inherit; }
   background: #273134;
   image-rendering: pixelated;
 }
+.saved-palette-choice .block-cross-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
 .selected-thumb.is-wiki-sprite {
   background-position: center !important;
   background-size: contain !important;
   background-repeat: no-repeat !important;
   background-blend-mode: normal !important;
 }
+.selected-thumb.is-cross-model {
+  position: relative;
+  isolation: isolate;
+  background-image: none !important;
+  background-color: #282535 !important;
+  background-blend-mode: normal !important;
+}
+.selected-thumb.is-cross-model::before,
+.selected-thumb.is-cross-model::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--cross-plane-width, 12px);
+  height: var(--cross-plane-height, 23px);
+  background-image: var(--cross-icon-texture);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.32));
+}
+.selected-thumb.is-cross-model::before { z-index: 1; transform: translate(-50%, -50%) rotateY(45deg); }
+.selected-thumb.is-cross-model::after { z-index: 2; transform: translate(-50%, -50%) rotateY(-45deg); }
+.selected-thumb.is-cross-model.is-small-amethyst-bud { --cross-plane-width: 8px; --cross-plane-height: 13px; }
+.selected-thumb.is-cross-model.is-medium-amethyst-bud { --cross-plane-width: 9px; --cross-plane-height: 17px; }
+.selected-thumb.is-cross-model.is-large-amethyst-bud { --cross-plane-width: 10px; --cross-plane-height: 21px; }
+.selected-thumb.is-cross-model.is-amethyst-cluster { --cross-plane-width: 12px; --cross-plane-height: 25px; }
 .block-icon-source {
   display: inline-flex;
   align-items: center;

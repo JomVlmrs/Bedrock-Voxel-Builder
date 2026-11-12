@@ -53,6 +53,14 @@
     wooden_button: ["oak-button"]
   };
 
+  const CROSS_MODEL_IDS = new Set([
+    "amethyst_cluster",
+    "small_amethyst_bud",
+    "medium_amethyst_bud",
+    "large_amethyst_bud",
+    "amethyst_bud"
+  ]);
+
   const resolved = new Map();
 
   function cleanId(value) {
@@ -82,6 +90,33 @@
     return img.dataset.mojangFallback;
   }
 
+  function amethystStageClass(id) {
+    if (id === "small_amethyst_bud") return "is-small-amethyst-bud";
+    if (id === "medium_amethyst_bud") return "is-medium-amethyst-bud";
+    if (id === "large_amethyst_bud") return "is-large-amethyst-bud";
+    return "is-amethyst-cluster";
+  }
+
+  function makeCrossIcon(id, textureUrl) {
+    if (!CROSS_MODEL_IDS.has(id) || !textureUrl) return null;
+    const icon = document.createElement("span");
+    icon.className = "block-cross-icon " + amethystStageClass(id);
+    icon.dataset.crossBlockId = id;
+    icon.dataset.crossTextureUrl = textureUrl;
+    icon.setAttribute("role", "img");
+    icon.setAttribute("aria-label", "Cross model icon for minecraft:" + id);
+    icon.title = "Cross model · minecraft:" + id;
+    icon.style.setProperty("--cross-icon-texture", 'url("' + textureUrl.replace(/"/g, "%22") + '")');
+    return icon;
+  }
+
+  function replaceWithCrossIcon(element, id, textureUrl) {
+    const icon = makeCrossIcon(id, textureUrl);
+    if (!icon) return false;
+    element.replaceWith(icon);
+    return true;
+  }
+
   function restoreFallback(img, fallback) {
     img.onload = null;
     img.onerror = null;
@@ -96,6 +131,7 @@
     if (!id || rawId.includes(":") && !String(rawId).startsWith("minecraft:")) return;
 
     const fallback = rememberFallback(img);
+    if (replaceWithCrossIcon(img, id, fallback)) return;
     if (img.dataset.wikiBlockId === id) {
       if (img.dataset.wikiIconState === "wiki" || img.dataset.wikiIconState === "fallback" ||
           img.dataset.wikiIconState === "loading") return;
@@ -220,6 +256,34 @@
     const selectedRow = rows.querySelector(".catalog-row.is-selected");
     const id = cleanId(selectedRow?.dataset.id);
     if (!id) return;
+
+    if (CROSS_MODEL_IDS.has(id)) {
+      if (selectedThumb.dataset.wikiBlockId === id && selectedThumb.dataset.wikiIconState === "cross") return;
+      const crossIcon = selectedRow.querySelector(".block-cross-icon");
+      const image = selectedRow.querySelector("img.block-texture");
+      const textureUrl = crossIcon?.dataset.crossTextureUrl ||
+        image?.dataset.mojangFallback || image?.getAttribute("src") || "";
+      if (textureUrl) {
+        selectedThumb.classList.remove(
+          "is-wiki-sprite",
+          "is-small-amethyst-bud",
+          "is-medium-amethyst-bud",
+          "is-large-amethyst-bud",
+          "is-amethyst-cluster"
+        );
+        selectedThumb.classList.add("is-cross-model", "has-image", amethystStageClass(id));
+        selectedThumb.style.backgroundImage = "none";
+        selectedThumb.style.backgroundColor = "#282535";
+        selectedThumb.style.backgroundBlendMode = "normal";
+        selectedThumb.style.setProperty("--cross-icon-texture", 'url("' + textureUrl.replace(/"/g, "%22") + '")');
+        selectedThumb.dataset.wikiBlockId = id;
+        selectedThumb.dataset.wikiIconState = "cross";
+        return;
+      }
+    }
+
+    selectedThumb.classList.remove("is-cross-model", "is-small-amethyst-bud", "is-medium-amethyst-bud", "is-large-amethyst-bud", "is-amethyst-cluster");
+    selectedThumb.style.removeProperty("--cross-icon-texture");
 
     const current = selectedThumb.style.backgroundImage || "";
     if (selectedThumb.dataset.wikiBlockId === id &&
