@@ -1990,17 +1990,7 @@ function buildMcstructureNbt() {
     }
   };
 }
-function commandStatesForBlock(block) {
-  const states = { ...(block.states || {}) };
-  const schema = stateSchemaForBlock(block.id);
-  for (const state of schema?.states || []) {
-    if (!Object.prototype.hasOwnProperty.call(states, state.key) &&
-        Object.prototype.hasOwnProperty.call(state, "default")) {
-      states[state.key] = state.default;
-    }
-  }
-  return states;
-}
+// Command exports preserve the states explicitly selected in the editor.
 function encodeBlockStates(states) {
   const entries = Object.entries(states || {}).sort(([a], [b]) => a.localeCompare(b));
   if (!entries.length) return "";
@@ -2037,18 +2027,17 @@ function generateMcfunction() {
     let index = 0;
     while (index < row.length) {
       const start = row[index];
-      const startStates = commandStatesForBlock(start);
-      const signature = JSON.stringify([start.name, startStates]);
+      const signature = JSON.stringify([start.name, start.states || {}]);
       let end = index;
       while (end + 1 < row.length && row[end + 1].x === row[end].x + 1 &&
-        JSON.stringify([row[end + 1].name, commandStatesForBlock(row[end + 1])]) === signature) end += 1;
+        JSON.stringify([row[end + 1].name, row[end + 1].states || {}]) === signature) end += 1;
       if (ui.useFill.checked && end > index) {
         const last = row[end];
-        commands.push(`fill ${outputCoordinate(start.x,0)} ${outputCoordinate(start.y,1)} ${outputCoordinate(start.z,2)} ${outputCoordinate(last.x,0)} ${outputCoordinate(last.y,1)} ${outputCoordinate(last.z,2)} ${start.name}${encodeBlockStates(startStates)}`);
+        commands.push(`fill ${outputCoordinate(start.x,0)} ${outputCoordinate(start.y,1)} ${outputCoordinate(start.z,2)} ${outputCoordinate(last.x,0)} ${outputCoordinate(last.y,1)} ${outputCoordinate(last.z,2)} ${start.name}${encodeBlockStates(start.states)}`);
       } else {
         for (let i = index; i <= end; i += 1) {
           const block = row[i];
-          commands.push(`setblock ${outputCoordinate(block.x,0)} ${outputCoordinate(block.y,1)} ${outputCoordinate(block.z,2)} ${block.name}${encodeBlockStates(commandStatesForBlock(block))}`);
+          commands.push(`setblock ${outputCoordinate(block.x,0)} ${outputCoordinate(block.y,1)} ${outputCoordinate(block.z,2)} ${block.name}${encodeBlockStates(block.states)}`);
         }
       }
       index = end + 1;
