@@ -1091,6 +1091,22 @@ function createOrientedGroup(parent, states = {}, fallback = "north") {
   parent.add(oriented);
   return oriented;
 }
+// The shelf's authored geometry has its backboard on +Z and its open display
+// side toward -Z (north). Keep this mapping local so changing shelf orientation
+// cannot rotate doors, beds, mushroom shelves, or any other vanilla model.
+function createShelfOrientedGroup(parent, states = {}) {
+  const oriented = new THREE.Group();
+  const facing = blockFacing(states, "south");
+  const yawByFacing = {
+    north: 0,
+    east: -Math.PI / 2,
+    south: Math.PI,
+    west: Math.PI / 2
+  };
+  oriented.rotation.y = yawByFacing[facing] ?? Math.PI;
+  parent.add(oriented);
+  return oriented;
+}
 function blockAtOffset(record, dx, dy = 0, dz = 0) {
   return placedBlocks.get(cellKey(record.x + dx, record.y + dy, record.z + dz)) || null;
 }
@@ -1228,19 +1244,20 @@ function createBlockModel(group, record) {
       return;
     }
     case "shelf": {
-      // Bedrock's shelf is a compact horizontal three-slot display, mounted
-      // against a wall and rotated by minecraft:cardinal_direction.
-      const oriented = createOrientedGroup(group, states, "south");
+      // Bedrock uses four directional shelf voxel shapes. The visible model's
+      // base orientation faces north; the shelf-only map mirrors east/west
+      // correctly without changing any shared vanilla model rotations.
+      const oriented = createShelfOrientedGroup(group, states);
       const wood = mats;
-      // Back panel and the top/bottom ledges form the shallow wall-mounted body.
-      addBox(oriented, wood, 0.035, 0.31, 0.81, 0.93, 0.38, 0.14);
-      addBox(oriented, wood, 0.035, 0.25, 0.43, 0.93, 0.09, 0.52);
-      addBox(oriented, wood, 0.035, 0.66, 0.43, 0.93, 0.09, 0.52);
-      // Short side cheeks and dividers give the front three distinct item bays.
-      addBox(oriented, wood, 0.035, 0.34, 0.43, 0.07, 0.32, 0.52);
-      addBox(oriented, wood, 0.895, 0.34, 0.43, 0.07, 0.32, 0.52);
-      addBox(oriented, wood, 0.335, 0.34, 0.48, 0.045, 0.32, 0.43);
-      addBox(oriented, wood, 0.62, 0.34, 0.48, 0.045, 0.32, 0.43);
+      // The vanilla shelf is a thin wall-mounted display with three side-by-side bays.
+      // Keep the model inside the directional shelf voxel footprint.
+      addBox(oriented, wood, 0.015, 0.25, 0.91, 0.97, 0.5, 0.09);
+      addBox(oriented, wood, 0.015, 0.25, 0.78, 0.97, 0.09, 0.22);
+      addBox(oriented, wood, 0.015, 0.66, 0.78, 0.97, 0.09, 0.22);
+      addBox(oriented, wood, 0.015, 0.34, 0.78, 0.07, 0.32, 0.22);
+      addBox(oriented, wood, 0.915, 0.34, 0.78, 0.07, 0.32, 0.22);
+      addBox(oriented, wood, 0.333, 0.34, 0.82, 0.045, 0.32, 0.18);
+      addBox(oriented, wood, 0.622, 0.34, 0.82, 0.045, 0.32, 0.18);
       return;
     }
     case "straw_bed": {
@@ -1973,6 +1990,17 @@ function buildMcstructureNbt() {
     }
   };
 }
+function commandStatesForBlock(block) {
+  const states = { ...(block.states || {}) };
+  const schema = stateSchemaForBlock(block.id);
+  for (const state of schema?.states || []) {
+    if (!Object.prototype.hasOwnProperty.call(states, state.key) &&
+        Object.prototype.hasOwnProperty.call(state, "default")) {
+      states[state.key] = state.default;
+    }
+  }
+  return states;
+}
 function encodeBlockStates(states) {
   const entries = Object.entries(states || {}).sort(([a], [b]) => a.localeCompare(b));
   if (!entries.length) return "";
@@ -2009,17 +2037,18 @@ function generateMcfunction() {
     let index = 0;
     while (index < row.length) {
       const start = row[index];
-      const signature = JSON.stringify([start.name, start.states || {}]);
+      const startStates = commandStatesForBlock(start);
+      const signature = JSON.stringify([start.name, startStates]);
       let end = index;
       while (end + 1 < row.length && row[end + 1].x === row[end].x + 1 &&
-        JSON.stringify([row[end + 1].name, row[end + 1].states || {}]) === signature) end += 1;
+        JSON.stringify([row[end + 1].name, commandStatesForBlock(row[end + 1])]) === signature) end += 1;
       if (ui.useFill.checked && end > index) {
         const last = row[end];
-        commands.push(`fill ${outputCoordinate(start.x,0)} ${outputCoordinate(start.y,1)} ${outputCoordinate(start.z,2)} ${outputCoordinate(last.x,0)} ${outputCoordinate(last.y,1)} ${outputCoordinate(last.z,2)} ${start.name}${encodeBlockStates(start.states)}`);
+        commands.push(`fill ${outputCoordinate(start.x,0)} ${outputCoordinate(start.y,1)} ${outputCoordinate(start.z,2)} ${outputCoordinate(last.x,0)} ${outputCoordinate(last.y,1)} ${outputCoordinate(last.z,2)} ${start.name}${encodeBlockStates(startStates)}`);
       } else {
         for (let i = index; i <= end; i += 1) {
           const block = row[i];
-          commands.push(`setblock ${outputCoordinate(block.x,0)} ${outputCoordinate(block.y,1)} ${outputCoordinate(block.z,2)} ${block.name}${encodeBlockStates(block.states)}`);
+          commands.push(`setblock ${outputCoordinate(block.x,0)} ${outputCoordinate(block.y,1)} ${outputCoordinate(block.z,2)} ${block.name}${encodeBlockStates(commandStatesForBlock(block))}`);
         }
       }
       index = end + 1;
