@@ -67,7 +67,8 @@ jobs:
           required = [
               "index.html", "builder.js", "custom-tools.js", "catalog-fallback.js",
               "bedrock-models.js", "converter.js", "styles.css", "responsive.css",
-              "device-layout.css", "custom-tools.css", "data/vanilla-blocks.json",
+              "device-layout.css", "custom-tools.css", "footer-community.css",
+              "visitor-tracker.js", "data/vanilla-blocks.json",
               "data/block-states.json", "data/terrain_texture.json",
               "data/sample-version.json", "data/models/shelf_mushroom_small.geo.json",
               "data/models/shelf_mushroom_large.geo.json",
@@ -153,7 +154,9 @@ jobs:
           test -s ./_site/data/block-states.json
           test -s ./_site/data/terrain_texture.json
           test -s ./api/custom-blocks.js
+          test -s ./api/visitors.js
           test -s ./migrations/0001_create_custom_blocks.sql
+          test -s ./migrations/0002_create_site_visit_tracker.sql
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

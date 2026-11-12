@@ -1,0 +1,132 @@
+/* Community links and shared live visitor statistics in the site footer. */
+.footer {
+  height: auto;
+  min-height: 104px;
+  align-items: stretch;
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+.footer-community {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+.discord-invite {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  color: #dce9e5;
+  text-decoration: none;
+}
+.discord-invite:hover .discord-invite-copy strong {
+  color: var(--accent-soft);
+}
+.discord-invite-mark {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  place-items: center;
+  border: 1px solid #536b82;
+  border-radius: 8px;
+  background: #303f50;
+  color: #dce8f2;
+  font-size: 13px;
+  font-weight: 900;
+}
+.discord-invite-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.discord-invite-copy strong {
+  color: #e6f0ec;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .09em;
+  transition: color .15s ease;
+}
+.discord-invite-copy small {
+  color: #8fa09d;
+  font-size: 8px;
+  line-height: 1.4;
+}
+.discord-invite-arrow {
+  color: #9ab9ac;
+  font-size: 12px;
+}
+.visitor-tracker {
+  display: inline-flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: #9aaba5;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.visitor-live-indicator {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #71d8a9;
+  box-shadow: 0 0 8px rgba(113,216,169,.5);
+  animation: visitor-pulse 1.8s ease-in-out infinite;
+}
+.visitor-tracker.is-offline .visitor-live-indicator {
+  background: #8a7773;
+  box-shadow: none;
+  animation: none;
+}
+.visitor-tracker-label {
+  color: #8da19a;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+.visitor-count {
+  color: #e0eee7;
+  font-size: 10px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.visitor-separator {
+  width: 1px;
+  height: 13px;
+  margin: 0 3px;
+  background: #42504b;
+}
+.visitor-tracker-status {
+  margin-left: 3px;
+  color: #82d4ad;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.visitor-tracker.is-offline .visitor-tracker-status {
+  color: #d49c92;
+}
+@keyframes visitor-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.78); }
+}
+@media (max-width: 760px) {
+  .footer-community {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .visitor-tracker {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visitor-live-indicator { animation: none; }
+}
