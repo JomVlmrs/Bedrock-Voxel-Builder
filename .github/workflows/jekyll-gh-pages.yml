@@ -1,4 +1,4 @@
-name: Deploy Bedrock Voxel Builder from public
+name: Deploy Bedrock Voxel Builder to GitHub Pages
 
 on:
   push:
@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Verify local file connections
         shell: bash
@@ -44,12 +44,20 @@ jobs:
               ref = ref.strip().split("#", 1)[0].split("?", 1)[0]
               if not ref or ref.startswith(("https://", "http://", "//", "data:", "blob:", "mailto:", "javascript:", "#")):
                   return
-              target = (source.parent / ref).resolve()
+
+              # A leading slash is site-root-relative, not a filesystem path
+              # outside public/. Resolve it from the public directory itself.
+              if ref.startswith("/"):
+                  target = (root / ref.lstrip("/")).resolve()
+              else:
+                  target = (source.parent / ref).resolve()
+
               try:
                   target.relative_to(root)
               except ValueError:
                   errors.append(f"{source.relative_to(root)}: reference escapes public/: {ref}")
                   return
+
               if not target.is_file():
                   errors.append(f"{source.relative_to(root)}: missing local file: {ref}")
               checked.add(target)
@@ -70,7 +78,7 @@ jobs:
           html = root / "index.html"
           if html.is_file():
               source = html.read_text(encoding="utf-8")
-              for ref in re.findall(r'''(?:src|href)\s*=\s*["']([^"']+)["']''', source, re.I):
+              for ref in re.findall(r'''(?:src|href)\\s*=\\s*["']([^"']+)["']''', source, re.I):
                   check_ref(html, ref)
 
           for path in root.rglob("*"):
@@ -78,22 +86,22 @@ jobs:
                   continue
               if path.suffix in (".js", ".mjs"):
                   source = path.read_text(encoding="utf-8")
-                  for ref in re.findall(r'''(?:from\s*|import\s*\()\s*["']([^"']+)["']''', source):
+                  for ref in re.findall(r'''(?:from\\s*|import\\s*\\()\\s*["']([^"']+)["']''', source):
                       if ref.startswith("."):
                           check_ref(path, ref)
-                  for ref in re.findall(r'''new URL\(\s*["']([^"']+)["']''', source):
+                  for ref in re.findall(r'''new URL\\(\\s*["']([^"']+)["']''', source):
                       if ref.startswith("."):
                           check_ref(path, ref)
               elif path.suffix == ".css":
                   source = path.read_text(encoding="utf-8")
-                  for ref in re.findall(r'''url\(\s*["']?([^"')]+)''', source, re.I):
+                  for ref in re.findall(r'''url\\(\\s*["']?([^"')]+)''', source, re.I):
                       check_ref(path, ref)
-                  for ref in re.findall(r'''@import\s+["']([^"']+)["']''', source, re.I):
+                  for ref in re.findall(r'''@import\\s+["']([^"']+)["']''', source, re.I):
                       check_ref(path, ref)
 
           if errors:
               print("Static file connection check failed:")
-              print("\n".join(f"- {error}" for error in errors))
+              print("\\n".join(f"- {error}" for error in errors))
               sys.exit(1)
 
           print(f"Static file connection check passed ({len(checked)} local references checked).")
@@ -102,11 +110,41 @@ jobs:
       - name: Build static site from ./public
         shell: bash
         run: |
+          set -euo pipefail
           test -s ./public/index.html
           rm -rf ./_site
           mkdir -p ./_site
           cp -a ./public/. ./_site/
           touch ./_site/.nojekyll
+
+          # GitHub Pages project sites are served under /<repository>/.
+          # Rewrite only local site-root asset/data paths to stay under that prefix.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("_site")
+          for path in root.rglob("*"):
+              if not path.is_file() or path.suffix.lower() not in {".html", ".js", ".mjs", ".css"}:
+                  continue
+              source = path.read_text(encoding="utf-8")
+              if path.suffix.lower() == ".html":
+                  source = re.sub(r'''((?:src|href)\\s*=\\s*["'])/(?!/)''', r"\\1./", source, flags=re.I)
+              elif path.suffix.lower() in {".js", ".mjs"}:
+                  source = re.sub(r'''(["'`])/data/''', r"\\1./data/", source)
+              elif path.suffix.lower() == ".css":
+                  source = re.sub(r'''(url\\(\\s*["']?)/(?!/)''', r"\\1./", source, flags=re.I)
+              path.write_text(source, encoding="utf-8")
+
+          html = (root / "index.html").read_text(encoding="utf-8")
+          assert 'href="./styles.css"' in html, "Root-relative CSS URLs were not rewritten"
+          assert 'src="./builder.js"' in html, "Root-relative JavaScript URLs were not rewritten"
+          builder = (root / "builder.js").read_text(encoding="utf-8")
+          assert 'fetch("./data/vanilla-blocks.json")' in builder, "Block catalogue URL was not rewritten"
+          assert (root / ".nojekyll").is_file(), ".nojekyll marker is missing"
+          print("GitHub Pages project-path rewrite passed.")
+          PY
+
           test -s ./_site/index.html
           test -s ./_site/builder.js
           test -s ./_site/data/vanilla-blocks.json
@@ -114,7 +152,7 @@ jobs:
           test -s ./_site/data/terrain_texture.json
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./_site
 
@@ -127,4 +165,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
