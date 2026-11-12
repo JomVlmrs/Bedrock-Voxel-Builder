@@ -590,3 +590,37 @@
   .text-button,
   .button { transition: none !important; }
 }
+
+/* Keep the catalogue usable on short desktop/laptop viewports.
+   Let the document scroll instead of compressing the editor panels. */
+@media (min-width: 901px) and (max-height: 780px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #app.container {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: auto 580px auto;
+  }
+}
+
+/* The community footer sits after the editor. Allow page scrolling on
+   touch devices so it never gets clipped below the fixed-height viewport. */
+@media (max-width: 900px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  #app.container {
+    height: max(620px, calc(100dvh - 16px));
+    min-height: 620px;
+  }
+}
