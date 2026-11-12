@@ -1,10 +1,29 @@
 /* Community links and shared live visitor statistics in the site footer. */
-.footer {
-  height: auto;
-  min-height: 104px;
-  align-items: stretch;
-  padding-top: 11px;
-  padding-bottom: 11px;
+body {
+  flex-direction: column;
+}
+.container {
+  height: calc(100% - 60px);
+  min-height: 0;
+  flex: 0 0 auto;
+}
+.site-community-footer {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  margin-top: 8px;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 8px 15px;
+  background: #24292d;
+}
+.site-community-footer .footer-community {
+  width: 100%;
+  padding-top: 0;
+  border-top: 0;
 }
 .footer-community {
   display: flex;
@@ -118,6 +137,18 @@
   50% { opacity: .45; transform: scale(.78); }
 }
 @media (max-width: 760px) {
+  body {
+    flex-direction: column;
+  }
+  .container {
+    height: auto;
+    min-height: calc(100vh - 20px);
+    flex: 0 0 auto;
+  }
+  .site-community-footer {
+    min-height: 0;
+    padding: 10px;
+  }
   .footer-community {
     align-items: flex-start;
     flex-direction: column;
