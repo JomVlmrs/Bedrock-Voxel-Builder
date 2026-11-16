@@ -1172,9 +1172,14 @@ function addCustomBlockGeometry(group, record) {
     definition.model,
     (materialInstance, face) => {
       const name = String(materialInstance || "*").replace(/^.*:/, "").toLowerCase();
-      const url = textureUrls[materialInstance] ||
+      const sideFace = ["north", "east", "south", "west"].includes(face);
+      const faceTexture = textureUrls[face] ||
+        (sideFace ? textureUrls.side : null) ||
+        (face === "up" ? textureUrls.top : null) ||
+        (face === "down" ? (textureUrls.bottom || textureUrls.up || textureUrls.top) : null);
+      const url = faceTexture ||
+        textureUrls[materialInstance] ||
         textureUrls[name] ||
-        textureUrls[face] ||
         textureUrls["*"] ||
         Object.values(textureUrls)[0] ||
         null;
@@ -2733,6 +2738,9 @@ window.BedrockBuilder = {
   registerCustomBlock(block) {
     if (!block || typeof block.id !== "string" || !block.model || !block.textureUrls) return false;
     const id = block.id.trim().toLowerCase();
+    const modelMetadata = block.model?._bedrockVoxelBuilder || {};
+    const vanillaModelLabel = String(modelMetadata.vanillaModelIdentifier || "")
+      .replace(/^minecraft:geometry\./, "").replace(/_/g, " ");
     const entry = {
       id,
       name: id,
@@ -2741,7 +2749,7 @@ window.BedrockBuilder = {
       custom: true,
       customModelKey: id,
       shapeClass: "partial",
-      shapeLabel: "Custom model",
+      shapeLabel: modelMetadata.source === "vanilla" ? "Vanilla · " + vanillaModelLabel : "Custom model",
       textureUrl: block.textureUrls["*"] || Object.values(block.textureUrls)[0] || null,
       textureUrls: block.textureUrls,
       renderMode: block.renderMode || "cutout",

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./responsive.css">
   <link rel="stylesheet" href="./device-layout.css">
-  <link rel="stylesheet" href="./custom-tools.css">
+  <link rel="stylesheet" href="./custom-tools.css?v=59">
   <link rel="stylesheet" href="./footer-community.css">
   <script type="importmap">
     {
@@ -298,14 +298,14 @@
       <header class="custom-tools-header">
         <div>
           <h2 id="customBlockDialogTitle">Import Custom Block</h2>
-          <p>Add a Bedrock geometry model and its texture to your block catalogue.</p>
+          <p>Choose how the block's textures are assigned to its faces.</p>
         </div>
         <button id="closeCustomBlockImporter" class="custom-tools-close" type="button" aria-label="Close custom block importer">×</button>
       </header>
       <div class="custom-tools-content">
         <section class="custom-tool-card" aria-labelledby="blockImportTitle">
-          <h3 id="blockImportTitle">Block details and assets</h3>
-          <p class="custom-tool-lead">Enter the block identifier and its display-only name, then select the Bedrock geometry model and one texture image. Files are saved to your private project library.</p>
+          <h3 id="blockImportTitle">Block details and textures</h3>
+          <p class="custom-tool-lead">Create a custom block with either an imported Bedrock geometry model or a built-in vanilla block model. Choose the texture layout separately.</p>
           <form id="customBlockForm" class="custom-tool-form">
             <label class="custom-field">
               <span>Identifier · Block ID</span>
@@ -316,17 +316,93 @@
               <input id="customBlockName" type="text" placeholder="Ancient Oak" autocomplete="off" required maxlength="80">
               <small class="custom-help">Name only. This changes the label shown in the block table, not the Identifier.</small>
             </label>
-            <label class="custom-field">
-              <span>Block Model · Bedrock .geo.json</span>
-              <input id="customBlockModel" type="file" accept=".json,.geo.json,application/json" required>
-            </label>
-            <label class="custom-field">
-              <span>Block Texture · PNG, JPG, WebP</span>
-              <input id="customBlockTexture" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" required>
-            </label>
-            <p class="custom-help">Choose the geometry model and its texture image. The texture is applied to the model as its default material.</p>
+            <div class="custom-field">
+              <span>Model Source</span>
+              <div class="texture-layout-choices" role="radiogroup" aria-label="Block model source">
+                <label class="texture-layout-choice">
+                  <input type="radio" name="customModelSource" value="custom" checked>
+                  <span><strong>Custom model</strong><small>Import .geo.json</small></span>
+                </label>
+                <label class="texture-layout-choice">
+                  <input type="radio" name="customModelSource" value="vanilla">
+                  <span><strong>Vanilla model</strong><small>Choose Bedrock geometry</small></span>
+                </label>
+              </div>
+            </div>
+            <div id="customModelUploadField">
+              <label class="custom-field">
+                <span>Custom Block Model · Bedrock .geo.json</span>
+                <input id="customBlockModel" type="file" accept=".json,.geo.json,application/json" required>
+                <small class="custom-help">Import a Blockbench Bedrock geometry JSON file (2 MB maximum).</small>
+              </label>
+            </div>
+            <div id="customVanillaModelFields" class="custom-model-source-fields" hidden>
+              <label class="custom-field">
+                <span>Vanilla Block Model</span>
+                <select id="customVanillaModel">
+                  <option value="minecraft:geometry.full_block">minecraft:geometry.full_block · Full cube</option>
+                  <option value="minecraft:geometry.cross">minecraft:geometry.cross · Cross planes</option>
+                  <option value="minecraft:geometry.shelf_mushroom_large">minecraft:geometry.shelf_mushroom_large · Large mushroom shelf</option>
+                  <option value="minecraft:geometry.shelf_mushroom_small">minecraft:geometry.shelf_mushroom_small · Small mushroom shelf</option>
+                  <option value="minecraft:geometry.straw_bed_foot">minecraft:geometry.straw_bed_foot · Straw bed foot</option>
+                  <option value="minecraft:geometry.straw_bed_head">minecraft:geometry.straw_bed_head · Straw bed head</option>
+                  <option value="minecraft:geometry.full_block_v1">minecraft:geometry.full_block_v1 · Legacy full cube</option>
+                </select>
+                <small id="customVanillaModelHelp" class="custom-help">Uses the vanilla full-block geometry. The uploaded texture is applied to its faces in this builder's preview.</small>
+              </label>
+              <label class="custom-field">
+                <span>Vanilla Voxel Shape Reference · Optional</span>
+                <select id="customVoxelShape">
+                  <option value="">No voxel shape reference</option>
+                </select>
+                <small class="custom-help">A voxel shape is separate from render geometry. This is saved as a reference only; it does not change the model mesh or collision behavior in this structure preview.</small>
+              </label>
+              <div id="customVoxelShapePreview" class="custom-model-reference" hidden>
+                <img id="customVoxelShapeImage" alt="Selected vanilla voxel shape reference">
+                <span id="customVoxelShapeNotes"></span>
+              </div>
+              <small class="custom-help">References: <a href="https://wiki.bedrock.dev/blocks/vanilla-block-models" target="_blank" rel="noopener noreferrer">Vanilla block models</a> · <a href="https://wiki.bedrock.dev/blocks/vanilla-voxel-shapes" target="_blank" rel="noopener noreferrer">Vanilla voxel shapes</a></small>
+            </div>
+            <div class="custom-field">
+              <span>Texture Layout</span>
+              <div class="texture-layout-choices" role="radiogroup" aria-label="Texture layout">
+                <label class="texture-layout-choice">
+                  <input type="radio" name="customTextureLayout" value="all" checked>
+                  <span><strong>All faces</strong><small>One texture</small></span>
+                </label>
+                <label class="texture-layout-choice">
+                  <input type="radio" name="customTextureLayout" value="log">
+                  <span><strong>Log-style</strong><small>Sides + ends</small></span>
+                </label>
+              </div>
+            </div>
+            <div id="allFaceTextureFields">
+              <label class="custom-field">
+                <span>Block Texture · All 6 Faces</span>
+                <input id="customBlockTexture" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+                <small class="custom-help">The same image is used on the top, bottom, north, east, south, and west faces.</small>
+              </label>
+            </div>
+            <div id="logTextureFields" hidden>
+              <label class="custom-field">
+                <span>Shared Side Texture · North / East / South / West</span>
+                <input id="customBlockSideTexture" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+                <small class="custom-help">This one image is applied to all four horizontal faces. You do not need to upload the side texture four times.</small>
+              </label>
+              <label class="custom-field">
+                <span>Top Texture · Up Face</span>
+                <input id="customBlockTopTexture" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+                <small class="custom-help">Used only on the top face.</small>
+              </label>
+              <label class="custom-field">
+                <span>Bottom Texture · Down Face (Optional)</span>
+                <input id="customBlockBottomTexture" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+                <small class="custom-help">Used only on the bottom face. When empty, the top texture is reused.</small>
+              </label>
+            </div>
+            <p class="custom-help">PNG, JPG, or WebP · 5 MB per image · 12 MB total. For separate face images, keep their dimensions consistent with the model's UV texture size.</p>
             <button id="importCustomBlock" class="custom-tool-button" type="submit">Import custom block</button>
-            <p id="importStatus" class="custom-status" role="status">Model size: 2 MB max. Texture size: 5 MB max.</p>
+            <p id="importStatus" class="custom-status" role="status">Model size: 2 MB max. Texture size: 5 MB per image, 12 MB total.</p>
           </form>
           <div class="custom-library">
             <div class="custom-range-line"><strong>Saved custom block library</strong><button class="custom-tool-button secondary" id="refreshCustomLibrary" type="button">Refresh</button></div>
@@ -342,8 +418,8 @@
   </dialog>
 
   <script defer src="./catalog-fallback.js"></script>
-  <script type="module" src="./builder.js"></script>
-  <script type="module" src="./custom-tools.js"></script>
+  <script type="module" src="./builder.js?v=58"></script>
+  <script type="module" src="./custom-tools.js?v=58"></script>
   <script defer src="./visitor-tracker.js"></script>
   <script defer src="./block-icons.js"></script>
 </body>

@@ -26,6 +26,23 @@ const treePresets = {
   pale_oak: { log: 'pale_oak_log', leaves: 'pale_oak_leaves', style: 'round', label: 'Pale oak' }
 };
 
+const vanillaModelAssets = {
+  "minecraft:geometry.shelf_mushroom_large": "./data/models/shelf_mushroom_large.geo.json",
+  "minecraft:geometry.shelf_mushroom_small": "./data/models/shelf_mushroom_small.geo.json",
+  "minecraft:geometry.straw_bed_foot": "./data/models/straw_bed_foot.geo.json",
+  "minecraft:geometry.straw_bed_head": "./data/models/straw_bed_head.geo.json"
+};
+const vanillaModelDescriptions = {
+  "minecraft:geometry.full_block": "Full 16×16×16 cube. The current Bedrock Wiki lists this as the preferred full-block model.",
+  "minecraft:geometry.cross": "Two intersecting planes for crossed plant-style models. The Wiki notes that ambient occlusion and face dimming should be disabled for this model.",
+  "minecraft:geometry.shelf_mushroom_large": "The authored large mushroom-shelf geometry from the builder's included Bedrock model reference.",
+  "minecraft:geometry.shelf_mushroom_small": "The authored small mushroom-shelf geometry from the builder's included Bedrock model reference.",
+  "minecraft:geometry.straw_bed_foot": "The vanilla straw-bed foot-piece geometry.",
+  "minecraft:geometry.straw_bed_head": "The vanilla straw-bed head-piece geometry.",
+  "minecraft:geometry.full_block_v1": "Legacy full-block geometry. Deprecated by the Bedrock Wiki; use minecraft:geometry.full_block for new blocks."
+};
+let vanillaVoxelShapeRows = [];
+
 function setMessage(node, message, error = false) {
   node.textContent = message;
   node.classList.toggle('error', error);
@@ -275,7 +292,16 @@ function renderLibrary(blocks) {
     title.textContent = block.name;
     const id = document.createElement('small');
     id.textContent = block.id;
-    copy.append(title, id);
+    const modelMeta = block.model?._bedrockVoxelBuilder || {};
+    const modelDetails = document.createElement('small');
+    const modelSourceLabel = modelMeta.source === 'vanilla'
+      ? 'Model · ' + String(modelMeta.vanillaModelIdentifier || 'vanilla').replace(/^minecraft:geometry\./, '')
+      : 'Custom geometry';
+    modelDetails.textContent = [
+      modelSourceLabel,
+      modelMeta.voxelShapeIdentifier ? 'Shape · ' + modelMeta.voxelShapeIdentifier : ''
+    ].filter(Boolean).join('  ·  ');
+    copy.append(title, id, modelDetails);
     const use = document.createElement('button');
     use.type = 'button';
     use.textContent = 'Use block';
@@ -310,6 +336,144 @@ function renderLibrary(blocks) {
 }
 $('#refreshCustomLibrary').addEventListener('click', loadCustomLibrary);
 
+function selectedTextureLayout() {
+  return blockForm.querySelector('input[name="customTextureLayout"]:checked')?.value || 'all';
+}
+
+function updateTextureLayout() {
+  const layout = selectedTextureLayout();
+  $('#allFaceTextureFields').hidden = layout !== 'all';
+  $('#logTextureFields').hidden = layout !== 'log';
+  $('#customBlockTexture').required = layout === 'all';
+  $('#customBlockSideTexture').required = layout === 'log';
+  $('#customBlockTopTexture').required = layout === 'log';
+  $('#customBlockBottomTexture').required = false;
+}
+
+function selectedModelSource() {
+  return blockForm.querySelector('input[name="customModelSource"]:checked')?.value || 'custom';
+}
+
+function updateModelSource() {
+  const vanilla = selectedModelSource() === 'vanilla';
+  $('#customModelUploadField').hidden = vanilla;
+  $('#customVanillaModelFields').hidden = !vanilla;
+  $('#customBlockModel').disabled = vanilla;
+  $('#customBlockModel').required = !vanilla;
+  updateVanillaModelHelp();
+}
+
+function updateVanillaModelHelp() {
+  const identifier = $('#customVanillaModel').value;
+  $('#customVanillaModelHelp').textContent = vanillaModelDescriptions[identifier] ||
+    'Uses the selected vanilla Bedrock geometry with the texture layout chosen below.';
+}
+
+function updateVoxelShapePreview() {
+  const identifier = $('#customVoxelShape').value;
+  const shape = vanillaVoxelShapeRows.find((item) => item.identifier === identifier);
+  const preview = $('#customVoxelShapePreview');
+  preview.hidden = !shape;
+  if (!shape) return;
+  $('#customVoxelShapeImage').src = shape.image;
+  $('#customVoxelShapeImage').alt = identifier + ' voxel shape';
+  $('#customVoxelShapeNotes').textContent = shape.notes || 'No additional notes in the reference.';
+}
+
+async function loadVoxelShapeOptions() {
+  try {
+    const response = await fetch('./voxel-shapes.json');
+    if (!response.ok) throw new Error('Voxel shape reference could not be loaded.');
+    const data = await response.json();
+    vanillaVoxelShapeRows = Array.isArray(data.rows) ? data.rows : [];
+    const select = $('#customVoxelShape');
+    for (const shape of vanillaVoxelShapeRows) {
+      const option = document.createElement('option');
+      option.value = shape.identifier;
+      option.textContent = shape.identifier;
+      select.append(option);
+    }
+    updateVoxelShapePreview();
+  } catch {
+    $('#customVoxelShape').disabled = true;
+    $('#customVoxelShapeNotes').textContent = 'The optional voxel-shape reference list is unavailable.';
+  }
+}
+
+function generatedVanillaModel(identifier, cubes) {
+  return {
+    format_version: '1.12.0',
+    'minecraft:geometry': [{
+      description: {
+        identifier,
+        texture_width: 16,
+        texture_height: 16,
+        visible_bounds_width: 2,
+        visible_bounds_height: 2,
+        visible_bounds_offset: [0, 0, 0]
+      },
+      bones: [{
+        name: 'root',
+        pivot: [0, 0, 0],
+        cubes
+      }]
+    }]
+  };
+}
+
+function vanillaCube(origin, size) {
+  const faceUv = Object.fromEntries(['north', 'east', 'south', 'west', 'up', 'down'].map((face) => [
+    face,
+    { uv: [0, 0], uv_size: [16, 16] }
+  ]));
+  return { origin, size, pivot: [0, 0, 0], uv: faceUv };
+}
+
+async function createVanillaModel(identifier) {
+  if (identifier === 'minecraft:geometry.full_block' || identifier === 'minecraft:geometry.full_block_v1') {
+    return generatedVanillaModel(identifier, [
+      vanillaCube([-8, 0, -8], [16, 16, 16])
+    ]);
+  }
+  if (identifier === 'minecraft:geometry.cross') {
+    return generatedVanillaModel(identifier, [
+      vanillaCube([-8, 0, -0.125], [16, 16, 0.25]),
+      vanillaCube([-0.125, 0, -8], [0.25, 16, 16])
+    ]);
+  }
+  const path = vanillaModelAssets[identifier];
+  if (!path) throw new Error('Choose a supported vanilla block model.');
+  const response = await fetch(path);
+  if (!response.ok) throw new Error('The selected vanilla model geometry could not be loaded.');
+  const model = await response.json();
+  if (!validGeometry(model)) throw new Error('The selected vanilla model geometry is invalid.');
+  return model;
+}
+
+blockForm.querySelectorAll('input[name="customModelSource"]').forEach((input) => {
+  input.addEventListener('change', updateModelSource);
+});
+$('#customVanillaModel').addEventListener('change', updateVanillaModelHelp);
+$('#customVoxelShape').addEventListener('change', updateVoxelShapePreview);
+updateModelSource();
+loadVoxelShapeOptions();
+
+blockForm.querySelectorAll('input[name="customTextureLayout"]').forEach((input) => {
+  input.addEventListener('change', updateTextureLayout);
+});
+updateTextureLayout();
+
+function validateTextureFile(file, label, required = true) {
+  if (!file) {
+    if (required) throw new Error('Choose a ' + label + ' image.');
+    return null;
+  }
+  if (file.size > 5 * 1024 * 1024) throw new Error(label + ' must be 5 MB or smaller.');
+  const extension = file.name.match(/\.(png|jpe?g|webp)$/i)?.[0]?.toLowerCase();
+  if (!extension) throw new Error(label + ' must be a PNG, JPG, or WebP image.');
+  return extension;
+}
+
 blockForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!customBlockApiAvailable) {
@@ -322,34 +486,74 @@ blockForm.addEventListener('submit', async (event) => {
     await waitForBuilder();
     const blockId = $('#customBlockId').value.trim().toLowerCase();
     const blockName = $('#customBlockName').value.trim();
+    const modelSource = selectedModelSource();
     const modelFile = $('#customBlockModel').files[0];
-    const textureFile = $('#customBlockTexture').files[0];
+    const vanillaModelIdentifier = $('#customVanillaModel').value;
+    const voxelShapeIdentifier = modelSource === 'vanilla' ? ($('#customVoxelShape').value || null) : null;
+    const layout = selectedTextureLayout();
     if (!validateBlockId(blockId)) throw new Error('Use a namespaced ID such as custom:ancient_oak.');
     if (!blockName || blockName.length > 80) throw new Error('Enter a display name up to 80 characters.');
-    if (!modelFile || modelFile.size > 2 * 1024 * 1024) throw new Error('Choose one .geo.json model file (maximum 2 MB).');
-    if (!textureFile) throw new Error('Choose one block texture image.');
-    if (textureFile.size > 5 * 1024 * 1024) throw new Error('The block texture must be 5 MB or smaller.');
-    if (!/\.(png|jpe?g|webp)$/i.test(textureFile.name)) {
-      throw new Error('The block texture must be a PNG, JPG, or WebP image.');
+    if (modelSource === 'custom' && (!modelFile || modelFile.size > 2 * 1024 * 1024)) {
+      throw new Error('Choose one .geo.json model file (maximum 2 MB).');
     }
+
+    const textureFiles = [];
+    if (layout === 'all') {
+      const file = $('#customBlockTexture').files[0];
+      const extension = validateTextureFile(file, 'block texture');
+      textureFiles.push({ file, filename: 'all' + extension });
+    } else {
+      const side = $('#customBlockSideTexture').files[0];
+      const top = $('#customBlockTopTexture').files[0];
+      const bottom = $('#customBlockBottomTexture').files[0];
+      const sideExtension = validateTextureFile(side, 'side texture');
+      const topExtension = validateTextureFile(top, 'top texture');
+      const bottomExtension = validateTextureFile(bottom, 'bottom texture', false);
+      textureFiles.push({ file: side, filename: 'side' + sideExtension });
+      textureFiles.push({ file: top, filename: 'up' + topExtension });
+      if (bottom) textureFiles.push({ file: bottom, filename: 'down' + bottomExtension });
+    }
+    const totalTextureBytes = textureFiles.reduce((total, entry) => total + entry.file.size, 0);
+    if (totalTextureBytes > 12 * 1024 * 1024) throw new Error('All texture images together must be 12 MB or smaller.');
+
     let model;
-    try { model = JSON.parse(await modelFile.text()); }
-    catch { throw new Error('The model file is not valid JSON.'); }
-    if (!validGeometry(model)) throw new Error('Model must contain minecraft:geometry with at least one valid cube.');
+    if (modelSource === 'custom') {
+      try { model = JSON.parse(await modelFile.text()); }
+      catch { throw new Error('The model file is not valid JSON.'); }
+      if (!validGeometry(model)) throw new Error('Model must contain minecraft:geometry with at least one valid cube.');
+    } else {
+      model = await createVanillaModel(vanillaModelIdentifier);
+    }
+    if (!validGeometry(model)) throw new Error('The selected model must contain minecraft:geometry with at least one valid cube.');
     if (model['minecraft:geometry'][0].bones.length > 128) throw new Error('The model has too many bones (128 maximum).');
+    model._bedrockVoxelBuilder = {
+      source: modelSource,
+      vanillaModelIdentifier: modelSource === 'vanilla' ? vanillaModelIdentifier : null,
+      voxelShapeIdentifier
+    };
 
     const formData = new FormData();
     formData.append('blockId', blockId);
     formData.append('blockName', blockName);
-    formData.append('model', modelFile, modelFile.name);
-    formData.append('textures', textureFile, textureFile.name);
-    const response = await fetch('/api/custom-blocks', { method: 'POST', body: formData });
+    const modelBlob = new Blob([JSON.stringify(model)], { type: 'application/json' });
+    formData.append('model', modelBlob, modelSource === 'vanilla' ? 'vanilla-model.geo.json' : modelFile.name);
+    for (const entry of textureFiles) {
+      formData.append('textures', entry.file, entry.filename);
+    }
+    const response = await fetch(customBlockApiUrl, { method: 'POST', body: formData });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'The custom block upload failed.');
     registerLibraryBlock(payload.block);
     builder.selectBlock(payload.block.id);
     blockForm.reset();
-    setMessage(importStatus, 'Saved and selected ' + payload.block.id + '. Its model and textures are ready to place from the block palette.');
+    updateModelSource();
+    updateTextureLayout();
+    const modelLabel = modelSource === 'vanilla'
+      ? 'vanilla model ' + vanillaModelIdentifier
+      : 'imported custom geometry';
+    setMessage(importStatus, 'Saved and selected ' + payload.block.id + ' using ' + modelLabel + '. Its ' +
+      (layout === 'log' ? 'log-style face textures' : 'single all-face texture') +
+      ' are ready to use from the block palette.');
     await loadCustomLibrary();
   } catch (error) {
     setMessage(importStatus, error.message || 'The custom block import failed.', true);
