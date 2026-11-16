@@ -141,7 +141,7 @@ jobs:
 
           html = (root / "index.html").read_text(encoding="utf-8")
           assert 'href="./styles.css"' in html, "Root-relative CSS URLs were not rewritten"
-          assert 'src="./builder.js"' in html, "Root-relative JavaScript URLs were not rewritten"
+          assert re.search(r'''src=["']\./builder\.js(?:\?[^"']*)?["']''', html, re.I), "Root-relative JavaScript URLs were not rewritten"
           builder = (root / "builder.js").read_text(encoding="utf-8")
           assert 'fetch("./data/vanilla-blocks.json")' in builder, "Block catalogue URL was not rewritten"
           assert (root / ".nojekyll").is_file(), ".nojekyll marker is missing"
