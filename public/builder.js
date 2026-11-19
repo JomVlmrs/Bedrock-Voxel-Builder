@@ -21,7 +21,7 @@ const ui = {
   stateControls: $("#stateControls"), traitReferenceContent: $("#traitReferenceContent"),
   stateCount: $("#stateCount"), stateHint: $("#stateHint"),
   resetStates: $("#resetStates"), canvasMode: $("#canvasMode"), blockRows: $("#blockRows"),
-  filteredCount: $("#filteredCount"), viewport: $("#viewport"),
+  filteredCount: $("#filteredCount"), viewport: $("#viewport"), previewDropZone: $("#previewDropZone"),
   emptyState: $("#emptyState"), placedCount: $("#placedCount"),
   canvasDimensions: $("#canvasDimensions"), resetView: $("#resetView"),
   saveSelectedBlock: $("#saveSelectedBlock"), savedBlockList: $("#savedBlockList"),
@@ -31,7 +31,11 @@ const ui = {
   downloadFunction: $("#downloadFunction"), downloadStructure: $("#downloadStructure"),
   importStructure: $("#importStructure"), importStructureCatalog: $("#importStructureCatalog"),
   structureFile: $("#structureFile"), structureVoidLegend: $("#structureVoidLegend"),
-  statusText: $("#statusText"), summaryText: $("#summaryText")
+  statusText: $("#statusText"), summaryText: $("#summaryText"),
+  importNotification: $("#importNotification"),
+  importNotificationTitle: $("#importNotificationTitle"),
+  importNotificationMessage: $("#importNotificationMessage"),
+  dismissImportNotification: $("#dismissImportNotification")
 };
 
 let rawBlockDefinitions = {};
@@ -63,6 +67,16 @@ let pointerStart = null;
 let blockHitTargets = [];
 let resizeObserver = null;
 let nbtLibraryPromise = null;
+let importedBatchMeshes = [];
+let importedHitboxBatch = null;
+let importedBatchNeedsRebuild = false;
+let importedBatchBuildToken = 0;
+let importedBatchBuildRunning = false;
+let importedBatchRebuildScheduled = false;
+let canvasRenderPending = false;
+let importNotificationTimer = null;
+let structureVoidTextureGeometry = null;
+let structureVoidTextureMaterial = null;
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin("anonymous");
@@ -82,7 +96,37 @@ function setStatus(message, kind = "normal") {
   ui.statusText.classList.toggle("is-error", kind === "error");
   ui.statusText.classList.toggle("is-success", kind === "success");
 }
+function hideImportNotification() {
+  if (importNotificationTimer !== null) {
+    window.clearTimeout(importNotificationTimer);
+    importNotificationTimer = null;
+  }
+  if (!ui.importNotification) return;
+  ui.importNotification.classList.remove("is-visible");
+  ui.importNotification.hidden = true;
+}
+function showImportNotification(title, message, kind = "success") {
+  if (!ui.importNotification) return;
+  if (importNotificationTimer !== null) window.clearTimeout(importNotificationTimer);
+  ui.importNotificationTitle.textContent = title;
+  ui.importNotificationMessage.textContent = message;
+  ui.importNotification.classList.toggle("is-warning", kind === "warning");
+  ui.importNotification.classList.toggle("is-error", kind === "error");
+  ui.importNotification.hidden = false;
+  requestAnimationFrame(() => ui.importNotification.classList.add("is-visible"));
+  importNotificationTimer = window.setTimeout(hideImportNotification, 8500);
+}
 function setSummary(message) { ui.summaryText.textContent = message; }
+function requestCanvasRender() {
+  if (!renderer || !scene || !camera || canvasRenderPending) return;
+  canvasRenderPending = true;
+  requestAnimationFrame(() => {
+    canvasRenderPending = false;
+    if (!renderer || !scene || !camera) return;
+    if (controls) controls.update();
+    renderer.render(scene, camera);
+  });
+}
 function currentSizeFromInputs() {
   return {
     x: Number.parseInt(ui.sizeX.value, 10),
@@ -494,9 +538,15 @@ function renderCatalog() {
   const filter = ui.shapeFilter.value;
   const filtered = catalog.filter((entry) => {
     const matchesQuery = !query || entry.id.includes(query) ||
-      entry.name.includes(query) || entry.label.toLowerCase().includes(query);
+      entry.name.includes(query) || String(entry.label || entry.displayName || "").toLowerCase().includes(query);
     return matchesQuery && (filter === "all" || entry.shapeClass === filter);
   });
+  // Count all placed blocks in one pass. Counting each catalogue row by
+  // rescanning the full structure makes large imports needlessly quadratic.
+  const placedCounts = new Map();
+  for (const record of placedBlocks.values()) {
+    placedCounts.set(record.id, (placedCounts.get(record.id) || 0) + 1);
+  }
   const fragment = document.createDocumentFragment();
   if (!filtered.length) {
     const row = document.createElement("tr");
@@ -539,7 +589,7 @@ function renderCatalog() {
       shapeCell.append(shape);
       const countCell = document.createElement("td");
       countCell.className = "used-count"; countCell.dataset.id = entry.id;
-      countCell.textContent = String(countPlacedForBlock(entry.id));
+      countCell.textContent = String(placedCounts.get(entry.id) || 0);
       row.append(textureCell, nameCell, shapeCell, countCell); fragment.append(row);
     }
   }
@@ -892,12 +942,12 @@ function updateBuildSummary() {
   if (ui.structureVoidLegend) {
     ui.structureVoidLegend.hidden = structureVoidCount === 0;
     const label = ui.structureVoidLegend.querySelector("span");
-    if (label) label.textContent = "STRUCTURE VOID · " + structureVoidCount.toLocaleString() + " PLACED · EDITOR MARKER ONLY";
+    if (label) label.textContent = "STRUCTURE VOID · " + structureVoidCount.toLocaleString() + " PLACED · VANILLA TEXTURE";
   }
   setSummary(`${total.toLocaleString()} blocks · ${types.toLocaleString()} types · ${currentSize.x}×${currentSize.y}×${currentSize.z} workspace`);
 }
 
-function getTexture(url) {
+function getTexture(url, onLoad = null) {
   if (!url) return null;
   if (textureCache.has(url)) return textureCache.get(url);
   const loader = url.toLowerCase().endsWith(".tga") ? tgaLoader : textureLoader;
@@ -907,6 +957,7 @@ function getTexture(url) {
     loaded.minFilter = THREE.NearestFilter;
     loaded.generateMipmaps = false;
     loaded.needsUpdate = true;
+    if (typeof onLoad === "function") onLoad(loaded);
   }, undefined, () => {});
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.magFilter = THREE.NearestFilter;
@@ -1066,8 +1117,9 @@ function blockFacing(states = {}, fallback = "north") {
     const value = String(cardinal).toLowerCase();
     if (["north","south","east","west"].includes(value)) return value;
   }
-  if (states.facing_direction !== undefined && states.facing_direction !== null) {
-    const value = Number(states.facing_direction);
+  const facingDirection = states.facing_direction ?? states["minecraft:facing_direction"];
+  if (facingDirection !== undefined && facingDirection !== null) {
+    const value = Number(facingDirection);
     return ({ 2: "north", 3: "south", 4: "west", 5: "east" })[value] || fallback;
   }
   if (states.weirdo_direction !== undefined && states.weirdo_direction !== null) {
@@ -1076,7 +1128,7 @@ function blockFacing(states = {}, fallback = "north") {
     // renderer's established stair-specific rotation interpretation.
     return ({ 0: "east", 1: "west", 2: "south", 3: "north" })[value] || fallback;
   }
-  const raw = states.direction;
+  const raw = states.direction ?? states["minecraft:direction"];
   if (typeof raw === "number" || (raw !== undefined && /^-?\d+$/.test(String(raw)))) {
     return ({ 0: "south", 1: "west", 2: "north", 3: "east" })[Number(raw)] || fallback;
   }
@@ -1088,7 +1140,21 @@ function yawForFacing(facing) {
 }
 function createOrientedGroup(parent, states = {}, fallback = "north") {
   const oriented = new THREE.Group();
-  oriented.rotation.y = yawForFacing(blockFacing(states, fallback));
+  const rawFacing = states.facing_direction ?? states["minecraft:facing_direction"];
+  const face = rawFacing == null ? "" : String(rawFacing).toLowerCase();
+  const rawDirection = states.direction ?? states["minecraft:direction"];
+  const direction = typeof rawDirection === "string" ? rawDirection.toLowerCase() : "";
+
+  // Bedrock facing_direction is six-sided: 0 Down, 1 Up, then the
+  // four horizontal directions. Rotate the model's front face onto that axis.
+  if (face === "0" || face === "down" || direction === "down") {
+    oriented.rotation.x = -Math.PI / 2;
+  } else if (face === "1" || face === "up" || direction === "up") {
+    oriented.rotation.x = Math.PI / 2;
+  } else {
+    // Keep the established horizontal Bedrock direction mapping unchanged.
+    oriented.rotation.y = yawForFacing(blockFacing(states, fallback));
+  }
   parent.add(oriented);
   return oriented;
 }
@@ -1192,30 +1258,26 @@ function addCustomBlockGeometry(group, record) {
   return true;
 }
 function addStructureVoidMarker(group) {
-  // Use the actual Bedrock vanilla structure_void texture on all six faces.
-  // This remains an editor-only preview: the saved palette cell is still -1.
-  const textureMaterials = materialsForBlock("structure_void");
-  for (const material of textureMaterials) {
-    material.side = THREE.DoubleSide;
-    material.needsUpdate = true;
+  // Mojang's transparent 16x16 vanilla texture is the only visible marker.
+  // Structure Void remains empty space and still exports as palette index -1.
+  if (!structureVoidTextureGeometry) {
+    structureVoidTextureGeometry = new THREE.BoxGeometry(0.92, 0.92, 0.92);
   }
-  addBox(group, textureMaterials, 0.025, 0.025, 0.025, 0.95, 0.95, 0.95);
-
-  // Keep a fine edge so the textured marker is still easy to pick out against
-  // similarly coloured blocks, without the previous oversized neon wireframe.
-  const edgeGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.97, 0.97, 0.97));
-  const outline = new THREE.LineSegments(
-    edgeGeometry,
-    new THREE.LineBasicMaterial({
-      color: 0xc58bb9,
-      transparent: true,
-      opacity: 0.52,
-      depthTest: true,
-      depthWrite: false
-    })
-  );
-  outline.renderOrder = 2;
-  group.add(outline);
+  if (!structureVoidTextureMaterial) {
+    structureVoidTextureMaterial = new THREE.MeshBasicMaterial({
+      map: getTexture("./data/structure_void.png", () => requestCanvasRender()),
+      color: 0xffffff,
+      alphaTest: 0.5,
+      transparent: false,
+      opacity: 1,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+  }
+  const marker = new THREE.Mesh(structureVoidTextureGeometry, structureVoidTextureMaterial);
+  marker.userData.isStructureVoidTexture = true;
+  marker.renderOrder = 4;
+  group.add(marker);
 }
 
 function createBlockModel(group, record) {
@@ -1398,19 +1460,7 @@ function createBlockModel(group, record) {
       return;
     }
     case "button": {
-      const oriented = new THREE.Group();
-      const face = Number(states.facing_direction ?? 0);
-      if (face === 0) {
-        // Attached to the underside; the button projects downward.
-        oriented.rotation.x = -Math.PI / 2;
-      } else if (face === 1) {
-        // Attached to the top face; the button projects upward.
-        oriented.rotation.x = Math.PI / 2;
-      } else {
-        // Side-mounted buttons use the four horizontal Bedrock directions.
-        oriented.rotation.y = yawForFacing(blockFacing(states, "north"));
-      }
-      group.add(oriented);
+      const oriented = createOrientedGroup(group, states, "north");
       const pressed = states.button_pressed_bit === true;
       // Pressed buttons sit closer to their supporting face.
       addBox(oriented, mats, 0.35, 0.4, pressed ? 0.015 : 0, 0.3, 0.2, 0.12);
@@ -1532,7 +1582,19 @@ function createBlockModel(group, record) {
       addBox(group, mats, 0.18, 0.25, 0.18, 0.18, 0.5, 0.18);
       addBox(group, mats, 0.64, 0.25, 0.64, 0.18, 0.5, 0.18); return;
     case "egg": addBox(group, mats, 0.22, 0.08, 0.22, 0.56, 0.4, 0.56); return;
-    default: addBox(group, mats, 0, 0, 0, 1, 1, 1);
+    default: {
+      // Directional full-cube blocks (furnaces, dispensers, droppers,
+      // observers, etc.) need their face textures rotated with the state.
+      const rawDirection = states.direction ?? states["minecraft:direction"];
+      const hasFacing = states.facing_direction != null || states["minecraft:facing_direction"] != null ||
+        (typeof rawDirection === "string" && ["up", "down"].includes(rawDirection.toLowerCase()));
+      if (hasFacing) {
+        const oriented = createOrientedGroup(group, states, "north");
+        addBox(oriented, mats, 0, 0, 0, 1, 1, 1);
+      } else {
+        addBox(group, mats, 0, 0, 0, 1, 1, 1);
+      }
+    }
   }
 }
 
@@ -1564,38 +1626,230 @@ function createPlacedBlock(record) {
   record.group = group;
   record.hitbox = hitbox;
   blockHitTargets.push(hitbox);
+  requestCanvasRender();
+}
+
+async function createImportedRenderBatches() {
+  clearImportedRenderBatches();
+  const buildToken = importedBatchBuildToken;
+  const records = [...placedBlocks.values()].filter((record) => record.isBatchedImport);
+  if (!records.length) {
+    requestCanvasRender();
+    return;
+  }
+
+  worldGroup.updateMatrixWorld(true);
+  const rootInverse = new THREE.Matrix4().copy(worldGroup.matrixWorld).invert();
+  const batches = new Map();
+  const hitboxCells = [];
+  // One packed matrix buffer avoids retaining a separate Matrix4 object for
+  // every imported hitbox (16 float values per cell).
+  const hitboxMatrices = new Float32Array(records.length * 16);
+  let hitboxCount = 0;
+  const dummy = new THREE.Object3D();
+  const matrix = new THREE.Matrix4();
+  let frameStartedAt = performance.now();
+
+  for (let index = 0; index < records.length; index += 1) {
+    if (buildToken !== importedBatchBuildToken) return;
+    const record = records[index];
+    const group = new THREE.Group();
+    positionBlockGroup(group, record.x, record.y, record.z);
+    createBlockModel(group, record);
+    group.updateMatrixWorld(true);
+
+    // Keep special blended or unsupported objects as individual meshes so
+    // their established transparency and material behavior is unchanged.
+    let needsIndividualGroup = false;
+    group.traverse((child) => {
+      if (child.isMesh) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        if (!child.geometry || !materials.length || materials.some((material) => !material || material.transparent)) {
+          needsIndividualGroup = true;
+        }
+      } else if (child.isLineSegments) {
+        needsIndividualGroup = true;
+      }
+    });
+
+    if (needsIndividualGroup) {
+      record.group = group;
+      worldGroup.add(group);
+    } else {
+      record.group = null;
+      group.traverse((child) => {
+        matrix.multiplyMatrices(rootInverse, child.matrixWorld);
+        // Structure Void contributes only its vanilla texture mesh; no outline vertices are batched.
+        if (!child.isMesh || !child.geometry || !child.material) return;
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        const materialKey = materials.map((material) => material.uuid).join(",");
+        const renderOrder = child.renderOrder || 0;
+        const key = child.geometry.uuid + "|" + materialKey + "|" + renderOrder;
+        let batch = batches.get(key);
+        if (!batch) {
+          batch = {
+            geometry: child.geometry,
+            material: child.material,
+            renderOrder,
+            matrices: []
+          };
+          batches.set(key, batch);
+        }
+        // Flatten the 4x4 transform directly into the batch instead of
+        // allocating and retaining a Matrix4 instance for every mesh.
+        batch.matrices.push(...matrix.elements);
+      });
+    }
+
+    const origin = blockbenchOriginForCell(record.x, record.y, record.z);
+    dummy.position.set(origin.x, origin.y + BLOCK_PIXELS / 2, origin.z);
+    dummy.rotation.set(0, 0, 0);
+    dummy.scale.setScalar(BLOCK_PIXELS);
+    dummy.updateMatrix();
+    hitboxCells.push({
+      x: record.x,
+      y: record.y,
+      z: record.z,
+      key: cellKey(record.x, record.y, record.z)
+    });
+    hitboxMatrices.set(dummy.matrix.elements, hitboxCount * 16);
+    hitboxCount += 1;
+
+    // Work in short frame-sized slices so parsing and model creation don't
+    // monopolize the browser's main thread during large imports.
+    if (performance.now() - frameStartedAt >= 6) {
+      setStatus("Optimizing large structure preview · " + (index + 1).toLocaleString() +
+        " / " + records.length.toLocaleString() + " blocks…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (buildToken !== importedBatchBuildToken) return;
+      frameStartedAt = performance.now();
+    }
+  }
+
+  if (buildToken !== importedBatchBuildToken) return;
+
+  let builtBatches = 0;
+  for (const batch of batches.values()) {
+    const instanceCount = batch.matrices.length / 16;
+    const instanced = new THREE.InstancedMesh(batch.geometry, batch.material, instanceCount);
+    instanced.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    instanced.instanceMatrix.array.set(batch.matrices);
+    instanced.instanceMatrix.needsUpdate = true;
+    instanced.castShadow = true;
+    instanced.receiveShadow = true;
+    instanced.renderOrder = batch.renderOrder;
+    instanced.computeBoundingSphere();
+    worldGroup.add(instanced);
+    importedBatchMeshes.push(instanced);
+    builtBatches += 1;
+    if (performance.now() - frameStartedAt >= 6) {
+      setStatus("Finishing preview batches · " + builtBatches.toLocaleString() +
+        " / " + batches.size.toLocaleString() + " groups…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (buildToken !== importedBatchBuildToken) return;
+      frameStartedAt = performance.now();
+    }
+  }
+
+  // Imported Structure Void markers use the same vanilla texture batch as other blocks.
+
+  if (hitboxCount) {
+    const hitboxes = new THREE.InstancedMesh(boxGeometry(1, 1, 1), hitMaterial, hitboxCount);
+    hitboxes.userData.isInstancedHitbox = true;
+    hitboxes.userData.cells = hitboxCells;
+    hitboxes.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    hitboxes.instanceMatrix.array.set(hitboxMatrices.subarray(0, hitboxCount * 16));
+    hitboxes.instanceMatrix.needsUpdate = true;
+    hitboxes.computeBoundingSphere();
+    worldGroup.add(hitboxes);
+    blockHitTargets.push(hitboxes);
+    importedHitboxBatch = hitboxes;
+  }
+  requestCanvasRender();
+}
+
+function clearImportedRenderBatches() {
+  importedBatchBuildToken += 1;
+  const cachedGeometries = new Set([...geometryCache.values(), structureVoidTextureGeometry].filter(Boolean));
+  for (const mesh of importedBatchMeshes) {
+    worldGroup?.remove(mesh);
+    if (mesh.geometry && mesh.isInstancedMesh && !cachedGeometries.has(mesh.geometry)) {
+      mesh.geometry.dispose();
+    }
+  }
+  importedBatchMeshes = [];
+  if (importedHitboxBatch) {
+    worldGroup?.remove(importedHitboxBatch);
+    blockHitTargets = blockHitTargets.filter((target) => target !== importedHitboxBatch);
+    importedHitboxBatch = null;
+  }
+  for (const record of placedBlocks.values()) {
+    if (record.isBatchedImport && record.group) {
+      worldGroup?.remove(record.group);
+      record.group = null;
+    }
+  }
+}
+
+function scheduleImportedRenderBatchRebuild() {
+  if (!importedBatchNeedsRebuild || importedBatchRebuildScheduled) return;
+  if (importedBatchBuildRunning) return;
+  importedBatchNeedsRebuild = false;
+  importedBatchRebuildScheduled = true;
+  requestAnimationFrame(async () => {
+    importedBatchRebuildScheduled = false;
+    importedBatchBuildRunning = true;
+    try {
+      await createImportedRenderBatches();
+    } catch (error) {
+      setStatus("The imported preview could not be refreshed: " + (error.message || "unknown rendering error."), "error");
+    } finally {
+      importedBatchBuildRunning = false;
+      if (importedBatchNeedsRebuild) scheduleImportedRenderBatchRebuild();
+    }
+  });
 }
 function setPlacedSelectionHighlight(key) {
   const previous = placedBlocks.get(highlightedPlacedKey);
   if (previous?.selectionOutline) {
-    previous.group?.remove(previous.selectionOutline);
+    previous.selectionOutline.parent?.remove(previous.selectionOutline);
     previous.selectionOutline.geometry.dispose();
     previous.selectionOutline.material.dispose();
     previous.selectionOutline = null;
   }
   highlightedPlacedKey = null;
-  if (!key) return;
+  if (!key) { requestCanvasRender(); return; }
   const record = placedBlocks.get(key);
-  if (!record?.group) return;
-  const sourceGeometry = new THREE.BoxGeometry(1.035, 1.035, 1.035);
+  if (!record) return;
+  const sourceGeometry = new THREE.BoxGeometry(1.035 * BLOCK_PIXELS, 1.035 * BLOCK_PIXELS, 1.035 * BLOCK_PIXELS);
   const geometry = new THREE.EdgesGeometry(sourceGeometry);
   sourceGeometry.dispose();
   const material = new THREE.LineBasicMaterial({ color: 0xf0d37a, transparent: true, opacity: 0.95 });
   const outline = new THREE.LineSegments(geometry, material);
+  const origin = blockbenchOriginForCell(record.x, record.y, record.z);
+  outline.position.set(origin.x, origin.y + BLOCK_PIXELS / 2, origin.z);
   outline.renderOrder = 10;
-  record.group.add(outline);
+  worldGroup.add(outline);
   record.selectionOutline = outline;
   highlightedPlacedKey = key;
+  requestCanvasRender();
 }
 function rebuildPlacedBlock(key) {
   const record = placedBlocks.get(key);
   if (!record) return;
   if (record.selectionOutline) {
+    record.selectionOutline.parent?.remove(record.selectionOutline);
     record.selectionOutline.geometry.dispose();
     record.selectionOutline.material.dispose();
     record.selectionOutline = null;
   }
   if (highlightedPlacedKey === key) highlightedPlacedKey = null;
+  if (record.isBatchedImport) {
+    importedBatchNeedsRebuild = true;
+    scheduleImportedRenderBatchRebuild();
+    if (activePlacedBlockKey === key) setPlacedSelectionHighlight(key);
+    return;
+  }
   if (record.group) worldGroup.remove(record.group);
   blockHitTargets = blockHitTargets.filter((target) => target !== record.hitbox);
   createPlacedBlock(record);
@@ -1614,9 +1868,11 @@ function refreshConnectedModelsNear(x, y, z) {
 function removePlacedBlock(key) {
   const record = placedBlocks.get(key);
   if (!record) return false;
-  worldGroup.remove(record.group);
+  if (record.group) worldGroup.remove(record.group);
+  if (record.isBatchedImport) importedBatchNeedsRebuild = true;
   blockHitTargets = blockHitTargets.filter((target) => target !== record.hitbox);
   if (record.selectionOutline) {
+    record.selectionOutline.parent?.remove(record.selectionOutline);
     record.selectionOutline.geometry.dispose();
     record.selectionOutline.material.dispose();
     record.selectionOutline = null;
@@ -1633,6 +1889,7 @@ function removePlacedBlock(key) {
   }
   updateUsedCount(record.id);
   updateBuildSummary();
+  requestCanvasRender();
   return true;
 }
 function placeBlock(x, y, z) {
@@ -1695,6 +1952,7 @@ function removeBlockAt(x, y, z) {
     if (mate?.id === record.id && mate.model === "door") keysToRemove.push(mateKey);
   }
   for (const removeKey of keysToRemove) removePlacedBlock(removeKey);
+  if (importedBatchNeedsRebuild) scheduleImportedRenderBatchRebuild();
   if (keysToRemove.includes(activePlacedBlockKey)) {
     activePlacedBlockKey = null;
     setPlacedSelectionHighlight(null);
@@ -1714,12 +1972,19 @@ function eventToRay(event) {
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
 }
-function targetCellFromIntersection(intersection) {
+function hitboxCellFromIntersection(intersection) {
+  const object = intersection?.object;
+  if (object?.userData?.isInstancedHitbox && Number.isInteger(intersection.instanceId)) {
+    return object.userData.cells?.[intersection.instanceId] || null;
+  }
+  return object?.userData?.isHitbox ? object.userData.cell || null : null;
+}
+function targetCellFromIntersection(intersection, hitboxCell = null) {
   const object = intersection.object;
-  if (object.userData?.isHitbox) {
-    const cell = object.userData.cell;
-    // Transform a direction, not a normal matrix with inverse scale, because
-    // each rendered block group is scaled from block units to 16px model units.
+  const cell = hitboxCell || (object.userData?.isHitbox ? object.userData.cell : null);
+  if (cell) {
+    // Hitbox instances only translate and scale, so the shared face normal
+    // remains valid for determining the adjacent workspace cell.
     const normal = intersection.face.normal.clone().transformDirection(object.matrixWorld);
     const step = { x: Math.round(normal.x), y: Math.round(normal.y), z: Math.round(normal.z) };
     return { x: cell.x + step.x, y: cell.y + step.y, z: cell.z + step.z };
@@ -1739,16 +2004,13 @@ function handleCanvasAction(event, remove = false) {
   const intersections = raycaster.intersectObjects([...blockHitTargets, groundPlane], false);
   if (!intersections.length) return;
   const hit = intersections[0];
+  const cell = hitboxCellFromIntersection(hit);
   if (remove) {
-    if (hit.object.userData?.isHitbox) {
-      const cell = hit.object.userData.cell;
-      removeBlockAt(cell.x, cell.y, cell.z);
-    }
+    if (cell) removeBlockAt(cell.x, cell.y, cell.z);
     return;
   }
   if (canvasMode === "select") {
-    if (hit.object.userData?.isHitbox) {
-      const cell = hit.object.userData.cell;
+    if (cell) {
       const record = placedBlocks.get(cell.key || cellKey(cell.x, cell.y, cell.z));
       if (record) selectPlacedBlock(record);
     } else {
@@ -1756,7 +2018,7 @@ function handleCanvasAction(event, remove = false) {
     }
     return;
   }
-  const target = targetCellFromIntersection(hit);
+  const target = targetCellFromIntersection(hit, cell);
   placeBlock(target.x, target.y, target.z);
 }
 function buildWorkspaceHelpers() {
@@ -1784,9 +2046,14 @@ function buildWorkspaceHelpers() {
   boundsLines = new THREE.LineSegments(edgeGeometry, new THREE.LineBasicMaterial({ color: 0x78918a, transparent: true, opacity: 0.28 }));
   boundsLines.position.y = currentSize.y * BLOCK_PIXELS / 2;
   worldGroup.add(boundsLines);
+  requestCanvasRender();
 }
 function updateBlockPositions() {
-  for (const record of placedBlocks.values()) positionBlockGroup(record.group, record.x, record.y, record.z);
+  for (const record of placedBlocks.values()) {
+    if (record.group) positionBlockGroup(record.group, record.x, record.y, record.z);
+    if (record.isBatchedImport) importedBatchNeedsRebuild = true;
+  }
+  if (importedBatchNeedsRebuild) scheduleImportedRenderBatchRebuild();
 }
 function resetCamera() {
   if (!camera || !controls) return;
@@ -1831,6 +2098,7 @@ function resetCamera() {
   camera.far = Math.max(4000, distance * 8);
   camera.updateProjectionMatrix();
   controls.update();
+  requestCanvasRender();
 }
 function updateDimensions() {
   const next = currentSizeFromInputs();
@@ -1869,7 +2137,9 @@ function clearBuild() {
   const ids = new Set([...placedBlocks.values()].map((block) => block.id));
   setPlacedSelectionHighlight(null);
   activePlacedBlockKey = null;
-  for (const record of placedBlocks.values()) worldGroup.remove(record.group);
+  clearImportedRenderBatches();
+  importedBatchNeedsRebuild = false;
+  for (const record of placedBlocks.values()) if (record.group) worldGroup.remove(record.group);
   placedBlocks.clear(); blockHitTargets = [];
   resetCamera();
   if (selectedBlock) updateSelectedBlockDisplay(selectedBlock);
@@ -1899,6 +2169,7 @@ function initializeRenderer() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.07;
   controls.screenSpacePanning = true; controls.minDistance = BLOCK_PIXELS; controls.maxDistance = 12000;
+  controls.addEventListener("change", requestCanvasRender);
   renderer.domElement.addEventListener("pointerdown", (event) => {
     if (event.pointerType !== "touch" || event.isPrimary) {
       pointerStart = {
@@ -1928,10 +2199,11 @@ function initializeRenderer() {
     const width = Math.max(1, ui.viewport.clientWidth);
     const height = Math.max(1, ui.viewport.clientHeight);
     camera.aspect = width / height; camera.updateProjectionMatrix(); renderer.setSize(width, height);
+    requestCanvasRender();
   });
   resizeObserver.observe(ui.viewport);
-  const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
-  animate(); resetCamera();
+  requestCanvasRender();
+  resetCamera();
 }
 
 function makeTag(type, value) { return { type, value }; }
@@ -2077,9 +2349,9 @@ function importTagValue(tag) {
 }
 function importListValues(tag) {
   const value = importTagValue(tag);
-  if (Array.isArray(value) || ArrayBuffer.isView(value)) return Array.from(value);
-  if (value && (Array.isArray(value.value) || ArrayBuffer.isView(value.value))) return Array.from(value.value);
-  if (value?.value && (Array.isArray(value.value.value) || ArrayBuffer.isView(value.value.value))) return Array.from(value.value.value);
+  if (Array.isArray(value) || ArrayBuffer.isView(value)) return value;
+  if (value && (Array.isArray(value.value) || ArrayBuffer.isView(value.value))) return value.value;
+  if (value?.value && (Array.isArray(value.value.value) || ArrayBuffer.isView(value.value.value))) return value.value.value;
   return [];
 }
 function importCompoundValue(tag) {
@@ -2100,8 +2372,10 @@ function isOrdinaryAir(name) {
   return /(^|:)(air|cave_air|void_air)$/.test(String(name || "").toLowerCase());
 }
 function validateImportedSize(size) {
-  if (!Array.isArray(size) || size.length !== 3) throw new Error("The imported structure has no valid three-axis size.");
-  const values = size.map(Number);
+  if ((!Array.isArray(size) && !ArrayBuffer.isView(size)) || size.length !== 3) {
+    throw new Error("The imported structure has no valid three-axis size.");
+  }
+  const values = Array.from(size, Number);
   if (values.some((value) => !Number.isInteger(value) || value < 1 || value > 128)) {
     throw new Error("Imported dimensions must be whole numbers from 1 to 128 on each axis.");
   }
@@ -2127,10 +2401,12 @@ async function parseImportedMcstructure(arrayBuffer, fileName) {
   if (!layers.length || layers.length > 2 || (version === 1 && layers.length !== 2)) {
     throw new Error("The .mcstructure must contain the required block-index layer data.");
   }
-  const primary = importListValues(layers[0]).map(Number);
-  const secondary = layers[1] === undefined ? new Array(volume).fill(-1) : importListValues(layers[1]).map(Number);
-  if (primary.length !== volume || secondary.length !== volume) {
-    throw new Error("The .mcstructure block-index data does not match its declared dimensions (primary " + primary.length + ", secondary " + secondary.length + ", expected " + volume + ", layers " + layers.length + ").");
+  // Keep the NBT arrays in their original typed form. Copying up to a
+  // million indices into ordinary JavaScript arrays wastes memory and time.
+  const primary = importListValues(layers[0]);
+  const secondary = layers[1] === undefined ? null : importListValues(layers[1]);
+  if (primary.length !== volume || (secondary && secondary.length !== volume)) {
+    throw new Error("The .mcstructure block-index data does not match its declared dimensions (primary " + primary.length + ", secondary " + (secondary?.length ?? volume) + ", expected " + volume + ", layers " + layers.length + ").");
   }
   const paletteRoot = importCompoundValue(structure.palette);
   const defaultPalette = importCompoundValue(paletteRoot.default);
@@ -2147,9 +2423,10 @@ async function parseImportedMcstructure(arrayBuffer, fileName) {
   });
   const blocks = [];
   let secondaryConflicts = 0;
+  let parseFrameStartedAt = performance.now();
   for (let index = 0; index < volume; index += 1) {
-    const primaryIndex = primary[index];
-    const secondaryIndex = secondary[index];
+    const primaryIndex = Number(primary[index]);
+    const secondaryIndex = secondary ? Number(secondary[index]) : -1;
     if (primaryIndex < -1 || primaryIndex >= palette.length || secondaryIndex < -1 || secondaryIndex >= palette.length) {
       throw new Error("The .mcstructure contains a block palette index outside the palette.");
     }
@@ -2168,6 +2445,14 @@ async function parseImportedMcstructure(arrayBuffer, fileName) {
     blocks.push({ x, y, z, name: block.name, states: { ...(block.states || {}) } });
     if (blocks.length > MAX_PLACED_BLOCKS) {
       throw new Error("This file contains more than " + MAX_PLACED_BLOCKS.toLocaleString() + " non-air blocks. The editor import limit is " + MAX_PLACED_BLOCKS.toLocaleString() + ".");
+    }
+    // Give the browser regular paint/input time while scanning large volume
+    // arrays, instead of monopolizing the main thread for the whole file.
+    if ((index & 1023) === 1023 && performance.now() - parseFrameStartedAt >= 6) {
+      setStatus("Reading structure data · " + (index + 1).toLocaleString() +
+        " / " + volume.toLocaleString() + " cells…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      parseFrameStartedAt = performance.now();
     }
   }
   if (!blocks.length) throw new Error("This .mcstructure contains no visible or editable blocks to import.");
@@ -2421,20 +2706,26 @@ function parseImportedMcfunction(source, fileName) {
     fileName, kind: "mcfunction"
   };
 }
-function registerImportedBlock(name) {
+function registerImportedBlock(name, lookup = null) {
   const canonical = String(name || "").includes(":") ? String(name) : "minecraft:" + name;
   const id = canonical.startsWith("minecraft:") ? canonical.slice("minecraft:".length) : canonical;
-  let entry = catalog.find((item) => item.id === id || item.name === canonical);
-  if (entry) return entry;
+  const cached = lookup?.get(id) || lookup?.get(canonical);
+  const entryFound = cached || (!lookup && catalog.find((item) => item.id === id || item.name === canonical));
+  if (entryFound) return entryFound;
   const model = modelTypeForBlock(id);
-  entry = {
+  const entry = {
     id, name: canonical, displayName: displayName(id), model,
     custom: !canonical.startsWith("minecraft:"),
     shapeClass: shapeClass(model), shapeLabel: shapeLabel(model),
     textureUrl: thumbnailUrlForBlock(id), color: hashColor(id)
   };
   catalog.push(entry);
-  catalog.sort((a, b) => a.id.localeCompare(b.id));
+  if (lookup) {
+    lookup.set(id, entry);
+    lookup.set(canonical, entry);
+  } else {
+    catalog.sort((a, b) => a.id.localeCompare(b.id));
+  }
   return entry;
 }
 async function importStructureFile(file) {
@@ -2466,22 +2757,40 @@ async function importStructureFile(file) {
     if (parsed.blocks.length > MAX_PLACED_BLOCKS) {
       throw new Error("The editor can place up to " + MAX_PLACED_BLOCKS.toLocaleString() + " blocks per workspace.");
     }
-    const records = parsed.blocks.map((block) => {
+    const catalogLookup = new Map();
+    for (const entry of catalog) {
+      catalogLookup.set(entry.id, entry);
+      catalogLookup.set(entry.name, entry);
+    }
+    const catalogSizeBeforeImport = catalog.length;
+    const records = new Array(parsed.blocks.length);
+    let prepareFrameStartedAt = performance.now();
+    for (let index = 0; index < parsed.blocks.length; index += 1) {
+      const block = parsed.blocks[index];
       const x = Number(block.x), y = Number(block.y), z = Number(block.z);
       if (![x, y, z].every(Number.isInteger) || x < 0 || y < 0 || z < 0 ||
           x >= size[0] || y >= size[1] || z >= size[2]) {
         throw new Error("An imported block coordinate falls outside the declared workspace dimensions.");
       }
-      const entry = registerImportedBlock(block.name);
-      return {
+      const entry = registerImportedBlock(block.name, catalogLookup);
+      records[index] = {
         id: entry.id, name: entry.name, x, y, z,
         states: block.states && typeof block.states === "object" && !Array.isArray(block.states) ? { ...block.states } : {},
         model: entry.model, customModelKey: entry.customModelKey || null
       };
-    });
+      if (performance.now() - prepareFrameStartedAt >= 6) {
+        setStatus("Preparing imported blocks · " + (index + 1).toLocaleString() +
+          " / " + parsed.blocks.length.toLocaleString() + "…");
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        prepareFrameStartedAt = performance.now();
+      }
+    }
+    if (catalog.length !== catalogSizeBeforeImport) catalog.sort((a, b) => a.id.localeCompare(b.id));
     setPlacedSelectionHighlight(null);
     activePlacedBlockKey = null;
-    for (const record of placedBlocks.values()) worldGroup.remove(record.group);
+    clearImportedRenderBatches();
+    importedBatchNeedsRebuild = false;
+    for (const record of placedBlocks.values()) if (record.group) worldGroup.remove(record.group);
     placedBlocks.clear();
     blockHitTargets = [];
     currentSize = { x: size[0], y: size[1], z: size[2] };
@@ -2498,12 +2807,21 @@ async function importStructureFile(file) {
       input.disabled = ui.coordinateMode.value !== "absolute";
     });
     buildWorkspaceHelpers();
-    for (const record of records) placedBlocks.set(cellKey(record.x, record.y, record.z), record);
-    for (const record of records) {
-      createPlacedBlock(record);
-      updateUsedCount(record.id);
+    let placeFrameStartedAt = performance.now();
+    for (let index = 0; index < records.length; index += 1) {
+      const record = records[index];
+      record.isBatchedImport = true;
+      record.group = null;
+      record.hitbox = null;
+      placedBlocks.set(cellKey(record.x, record.y, record.z), record);
+      if (performance.now() - placeFrameStartedAt >= 6) {
+        setStatus("Adding blocks to workspace · " + (index + 1).toLocaleString() +
+          " / " + records.length.toLocaleString() + "…");
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        placeFrameStartedAt = performance.now();
+      }
     }
-    for (const record of records) refreshConnectedModelsNear(record.x, record.y, record.z);
+    await createImportedRenderBatches();
     if (records.length) {
       const first = records[0];
       const entry = catalog.find((item) => item.id === first.id);
@@ -2515,10 +2833,19 @@ async function importStructureFile(file) {
     updateBuildSummary();
     setMobileView("canvas");
     const note = parsed.warnings?.length ? " Notes: " + parsed.warnings.join(" ") : "";
+    const completionMessage = records.length.toLocaleString() + " blocks · " +
+      size.join(" × ") + " workspace · " + file.name;
     setStatus("Imported " + file.name + ": " + records.length.toLocaleString() +
       " blocks placed in a " + size.join(" × ") + " workspace." + note, parsed.warnings?.length ? "normal" : "success");
+    showImportNotification(
+      parsed.warnings?.length ? "Import completed with notes" : "Structure imported",
+      completionMessage,
+      parsed.warnings?.length ? "warning" : "success"
+    );
   } catch (error) {
-    setStatus("Import failed: " + (error.message || "The file could not be read."), "error");
+    const message = error.message || "The file could not be read.";
+    setStatus("Import failed: " + message, "error");
+    showImportNotification("Import failed", message, "error");
   } finally {
     ui.importStructure.disabled = false;
     if (ui.importStructureCatalog) ui.importStructureCatalog.disabled = false;
@@ -2626,8 +2953,57 @@ async function loadVanillaData() {
   buildCatalog();
   setStatus(`Loaded ${catalog.length.toLocaleString()} vanilla block identifiers, ${Object.keys(terrainTextureData).length.toLocaleString()} texture aliases, ${Object.keys(modelGeometryFiles).length} published block geometry models and ${Object.keys(blockStateData.schemas || {}).length} Bedrock state schemas.`, "success");
 }
+function wirePreviewFileDrop() {
+  if (!ui.viewport || !ui.previewDropZone) return;
+  let dragDepth = 0;
+  const hasFiles = (event) => Array.from(event.dataTransfer?.types || []).includes("Files");
+  const showDropZone = () => {
+    ui.previewDropZone.hidden = false;
+    ui.previewDropZone.setAttribute("aria-hidden", "false");
+    ui.viewport.classList.add("is-file-dragging");
+  };
+  const hideDropZone = () => {
+    dragDepth = 0;
+    ui.previewDropZone.hidden = true;
+    ui.previewDropZone.setAttribute("aria-hidden", "true");
+    ui.viewport.classList.remove("is-file-dragging");
+  };
+
+  ui.viewport.addEventListener("dragenter", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    showDropZone();
+  });
+  ui.viewport.addEventListener("dragover", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    showDropZone();
+  });
+  ui.viewport.addEventListener("dragleave", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) hideDropZone();
+  });
+  ui.viewport.addEventListener("drop", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer?.files || []);
+    hideDropZone();
+    if (!files.length) return;
+    if (files.length > 1) {
+      setStatus("One file at a time, please. Importing the first dropped file: " + files[0].name);
+    }
+    void importStructureFile(files[0]);
+  });
+  window.addEventListener("dragend", hideDropZone);
+  window.addEventListener("drop", hideDropZone);
+}
 function wireEvents() {
   syncResponsiveLayout(true);
+  wirePreviewFileDrop();
   ui.mobileTabs.forEach((tab, index) => {
     tab.addEventListener("click", () => setMobileView(tab.dataset.view));
     tab.addEventListener("keydown", (event) => {
@@ -2671,6 +3047,7 @@ function wireEvents() {
   ui.clearBuild.addEventListener("click", clearBuild);
   ui.downloadFunction.addEventListener("click", downloadFunction);
   ui.downloadStructure.addEventListener("click", downloadStructure);
+  ui.dismissImportNotification?.addEventListener("click", hideImportNotification);
   ui.importStructure.addEventListener("click", () => ui.structureFile.click());
   ui.importStructureCatalog?.addEventListener("click", () => ui.structureFile.click());
   ui.structureFile.addEventListener("change", (event) => {

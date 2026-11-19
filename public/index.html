@@ -134,6 +134,13 @@
         </div>
       </div>
       <div id="viewport" class="viewport">
+        <div id="previewDropZone" class="preview-drop-zone" aria-hidden="true" hidden>
+          <div class="preview-drop-card">
+            <span class="preview-drop-icon" aria-hidden="true">⇧</span>
+            <strong>DROP STRUCTURE FILE TO IMPORT</strong>
+            <span>Release a .mcstructure or .mcfunction file here</span>
+          </div>
+        </div>
         <div id="emptyState" class="empty-state">
           <div class="empty-cube">＋</div>
           <h2>Your structure starts here</h2>
@@ -141,6 +148,16 @@
           <span class="empty-shortcut">TAP / CLICK · PLACE <i> / </i> LONG-PRESS · REMOVE</span>
         </div>
         <div class="canvas-crosshair" aria-hidden="true"></div>
+      </div>
+      <div id="importNotification" class="import-notification" role="status"
+           aria-live="polite" aria-atomic="true" hidden>
+        <span class="import-notification-icon" aria-hidden="true">✓</span>
+        <span class="import-notification-copy">
+          <strong id="importNotificationTitle">Structure imported</strong>
+          <small id="importNotificationMessage"></small>
+        </span>
+        <button id="dismissImportNotification" class="import-notification-close" type="button"
+                aria-label="Dismiss import notification">×</button>
       </div>
       <section class="saved-block-palette" id="savedBlockPalette" aria-label="Saved block palette">
         <div class="saved-palette-heading">
