@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Sign in · Bedrock Voxel Builder</title>
+  <link rel="stylesheet" href="./billing.css">
+  <style>
+    body{display:grid;place-items:center}
+    .login-card{width:min(410px,100%);padding:30px;background:var(--panel);border:1px solid var(--line);border-radius:18px}
+    .login-card h1{font-size:29px;letter-spacing:-.04em;margin:24px 0 8px}
+    .login-sub{color:var(--muted);font-size:14px;margin-bottom:22px}
+    .login-input,.login-button{width:100%;height:48px;border-radius:9px;font:inherit}
+    .login-input{background:#171c20;color:var(--text);border:1px solid var(--line);padding:0 13px}
+    .login-button{border:0;background:var(--accent);color:#14211c;font-weight:800;cursor:pointer;margin-top:11px}
+    .login-button:disabled{opacity:.5;cursor:wait}
+    .login-button.secondary{background:var(--raised);border:1px solid var(--line);color:var(--text)}
+    .login-message{min-height:25px;margin-top:13px;color:var(--muted);font-size:13px}
+    .login-message.error{color:var(--danger)}
+    [hidden]{display:none!important}
+  .login-name-label{display:block;margin:3px 0 8px;text-align:left;color:var(--text);font-size:13px;font-weight:700}
+    #nameRow .login-sub{margin:12px 0 0}
+  </style>
+</head>
+<body>
+  <main class="login-card">
+    <a class="billing-brand" href="/">
+      <span class="billing-mark">BV</span>
+      <span>Bedrock Voxel Builder</span>
+    </a>
+    <h1 id="loginTitle">Sign in or create an account</h1>
+    <p id="loginSub" class="login-sub">Enter your account name to begin. You'll verify your email in the next step.</p>
+    <form id="loginForm" novalidate>
+      <div id="nameEntryRow">
+        <input class="login-input" id="startName" type="text" minlength="2" maxlength="32"
+          autocomplete="nickname" placeholder="Your name" autocapitalize="words"
+          spellcheck="false" required aria-label="Account name">
+      </div>
+      <div id="emailRow" hidden>
+        <input class="login-input" id="loginEmail" type="email" placeholder="you@example.com"
+          autocomplete="username webauthn" autocapitalize="off" autocorrect="off" spellcheck="false"
+          required aria-label="Email address">
+      </div>
+      <div id="codeRow" hidden>
+        <input class="login-input" id="loginCode" type="text" inputmode="numeric" maxlength="6"
+          pattern="[0-9]*" placeholder="6-digit code" autocomplete="one-time-code" aria-label="6-digit code">
+      </div>
+      <button class="login-button" id="loginSubmit" type="submit">Continue</button>
+      <button class="login-button secondary" id="loginBack" type="button" hidden>Use a different email</button>
+    </form>
+    <div id="nameRow" hidden>
+      <label class="login-name-label" for="displayName">Your account name</label>
+      <input class="login-input" id="displayName" type="text" maxlength="32" minlength="2"
+        autocomplete="nickname" placeholder="Choose a name" aria-label="Account name">
+      <button class="login-button" id="saveDisplayName" type="button">Finish registration</button>
+      <p class="login-sub">This name will identify your account and saved structures.</p>
+    </div>
+    <div id="passkeyRow" hidden>
+      <p class="login-sub">Add a passkey and next time you can sign in with your fingerprint, face, or device screen lock.</p>
+      <button class="login-button" id="passkeyAdd" type="button">Add a passkey</button>
+      <button class="login-button secondary" id="passkeySkip" type="button">Not now</button>
+    </div>
+    <p id="loginMessage" class="login-message" role="status" aria-live="polite"></p>
+  </main>
+<script>
+(function () {
+  const A = window.hatchable && window.hatchable.auth;
+  const $ = (id) => document.getElementById(id);
+  const form = $("loginForm");
+  const nameEntryRow = $("nameEntryRow");
+  const startNameInput = $("startName");
+  const emailRow = $("emailRow");
+  const codeRow = $("codeRow");
+  const emailEl = $("loginEmail");
+  const codeEl = $("loginCode");
+  const submit = $("loginSubmit");
+  const back = $("loginBack");
+  const msg = $("loginMessage");
+  const sub = $("loginSub");
+  const title = $("loginTitle");
+  const passkeyRow = $("passkeyRow");
+  const nameRow = $("nameRow");
+  const displayNameInput = $("displayName");
+  const saveDisplayName = $("saveDisplayName");
+  let step = "name";
+  let pendingDisplayName = "";
+  let hasPasskey = false;
+  let passkeyAutofillAttached = false;
+  const DECLINED = "bv_passkey_offer_declined";
+
+  function nextPath() {
+    const raw = new URLSearchParams(location.search).get("next") || "/";
+    if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
+    for (let i = 0; i < raw.length; i++) {
+      const c = raw.charCodeAt(i);
+      if (c < 32 || c === 92 || c === 127) return "/";
+    }
+    return raw;
+  }
+  function say(text, error) {
+    msg.textContent = text || "";
+    msg.classList.toggle("error", Boolean(error));
+  }
+  function done() { location.replace(nextPath()); }
+  function declined() {
+    try { return localStorage.getItem(DECLINED) === "1"; } catch { return false; }
+  }
+  function decline() {
+    try { localStorage.setItem(DECLINED, "1"); } catch {}
+  }
+  function finish() {
+    nameRow.hidden = true;
+    if (hasPasskey || declined() || !A.registerPasskey ||
+        !A.supportsPasskeys || !A.supportsPasskeys()) return done();
+    step = "passkey";
+    form.hidden = true;
+    title.textContent = "You're signed in";
+    sub.textContent = "Protect your account and sign in faster next time.";
+    passkeyRow.hidden = false;
+    say("");
+  }
+
+  async function saveAccountName(displayName) {
+    if (!displayName) return;
+    const response = await fetch("/api/account/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Your account name could not be saved.");
+  }
+
+  function attachPasskeyAutofill() {
+    if (passkeyAutofillAttached || !A.attachPasskeyAutofill) return;
+    passkeyAutofillAttached = true;
+    try {
+      A.attachPasskeyAutofill(emailEl).then((result) => {
+        if (result && result.user) {
+          hasPasskey = true;
+          saveAccountName(pendingDisplayName)
+            .then(continueAfterAuth)
+            .catch((error) => say(error.message, true));
+        }
+      }).catch(() => {});
+    } catch {}
+  }
+
+  async function continueAfterAuth() {
+    const response = await fetch("/api/account/profile", { cache: "no-store" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Your account profile could not be checked.");
+    if (!result.profile || !result.profile.display_name) {
+      form.hidden = true;
+      passkeyRow.hidden = true;
+      nameRow.hidden = false;
+      title.textContent = "Finish creating your account";
+      sub.textContent = "Choose the name that will appear beside your saved structures.";
+      say("Your email is verified. Add your account name to continue.");
+      displayNameInput.focus();
+      return;
+    }
+    nameRow.hidden = true;
+    finish();
+  }
+
+  if (!A) {
+    say("Sign-in is unavailable. Refresh and try again.", true);
+    submit.disabled = true;
+    return;
+  }
+
+  window.hatchable.auth.getSession().then((session) => {
+    if (session && session.user) continueAfterAuth().catch((error) => say(error.message, true));
+  }).catch(() => {});
+
+  // Passkey autofill is attached after the name step reveals the email field.
+
+  $("passkeyAdd").addEventListener("click", async () => {
+    $("passkeyAdd").disabled = true;
+    $("passkeySkip").disabled = true;
+    try {
+      const saved = await A.registerPasskey();
+      if (!saved) decline();
+      done();
+    } catch (error) {
+      $("passkeyAdd").disabled = false;
+      $("passkeySkip").disabled = false;
+      say(error.message || "Could not save the passkey. You can continue without one.", true);
+    }
+  });
+  $("passkeySkip").addEventListener("click", () => { decline(); done(); });
+
+  saveDisplayName.addEventListener("click", async () => {
+    const displayName = displayNameInput.value.trim().replace(/\s+/g, " ");
+    if (displayName.length < 2 || displayName.length > 32) {
+      say("Choose a name between 2 and 32 characters.", true);
+      displayNameInput.focus();
+      return;
+    }
+    saveDisplayName.disabled = true;
+    try {
+      const response = await fetch("/api/account/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Your account name could not be saved.");
+      nameRow.hidden = true;
+      finish();
+    } catch (error) {
+      say(error.message || "Your account name could not be saved.", true);
+    } finally {
+      saveDisplayName.disabled = false;
+    }
+  });
+
+  back.addEventListener("click", () => {
+    step = "email";
+    codeRow.hidden = true;
+    emailRow.hidden = false;
+    back.hidden = true;
+    submit.textContent = "Continue";
+    sub.textContent = "Enter your email address. We'll send you a one-time verification code.";
+    say("");
+    emailEl.focus();
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (step === "passkey") return;
+    submit.disabled = true;
+    try {
+      if (step === "name") {
+        const displayName = startNameInput.value.trim().replace(/\s+/g, " ");
+        if (displayName.length < 2 || displayName.length > 32) {
+          throw new Error("Choose a name between 2 and 32 characters.");
+        }
+        if (/[<>\u0000-\u001f]/.test(displayName)) {
+          throw new Error("That name contains unsupported characters.");
+        }
+        pendingDisplayName = displayName;
+        step = "email";
+        nameEntryRow.hidden = true;
+        emailRow.hidden = false;
+        title.textContent = "Verify your email";
+        sub.textContent = "Enter the email address for your account. We'll send a one-time code.";
+        submit.textContent = "Continue";
+        say("");
+        attachPasskeyAutofill();
+        emailEl.focus();
+      } else if (step === "email") {
+        const email = emailEl.value.trim();
+        if (!email) throw new Error("Enter your email address.");
+        const result = await A.startLogin({ email });
+        hasPasskey = Boolean(result && result.has_passkey);
+        if (hasPasskey && A.supportsPasskeys && A.supportsPasskeys()) {
+          try {
+            const signedIn = await A.signInWithPasskey({ email });
+            if (signedIn && signedIn.user) {
+              hasPasskey = true;
+              await saveAccountName(pendingDisplayName);
+              return await continueAfterAuth();
+            }
+          } catch {}
+        }
+        step = "code";
+        emailRow.hidden = true;
+        codeRow.hidden = false;
+        back.hidden = false;
+        submit.textContent = "Sign in";
+        sub.textContent = "Enter the one-time verification code sent to " + email + ".";
+        say("Code sent. It expires in 10 minutes.");
+        codeEl.focus();
+      } else {
+        const result = await A.verifyCode({
+          email: emailEl.value.trim(),
+          code: codeEl.value.trim()
+        });
+        if (!result || !result.user) throw new Error("That code did not work. Try again.");
+        await saveAccountName(pendingDisplayName);
+        await continueAfterAuth();
+      }
+    } catch (error) {
+      say(error.message || "Something went wrong. Please try again.", true);
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  startNameInput.focus();
+})();
+</script>
+</body>
+</html>

@@ -1,12 +1,16 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TGALoader } from "three/addons/loaders/TGALoader.js";
+import { loadBuilderEntitlements, promptForUpgrade } from "./billing-client.js";
 import { createVoxelBoxGeometry, createBedrockGeometryModel } from "./bedrock-models.js";
 
 const $ = (selector) => document.querySelector(selector);
 const RAW_ASSET_BASE = "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/";
-const MAX_STRUCTURE_VOLUME = 1_000_000;
-const MAX_PLACED_BLOCKS = 20_000;
+let MAX_STRUCTURE_VOLUME = 32_768;
+let MAX_WORKSPACE_DIMENSION = 32;
+let MAX_SAVED_BLOCKS = 12;
+const RENDER_CHUNK_SIZE = 32;
+const HITBOX_CHUNK_SIZE = 16;
 const BLOCK_PIXELS = 16;
 const DEFAULT_BLOCK_VERSION = 18168865;
 const SAVED_BLOCKS_STORAGE_KEY = "bedrock-voxel-builder-saved-palette-v1";
@@ -68,7 +72,7 @@ let blockHitTargets = [];
 let resizeObserver = null;
 let nbtLibraryPromise = null;
 let importedBatchMeshes = [];
-let importedHitboxBatch = null;
+let importedHitboxBatches = [];
 let importedBatchNeedsRebuild = false;
 let importedBatchBuildToken = 0;
 let importedBatchBuildRunning = false;
@@ -227,9 +231,11 @@ function saveCurrentBlockToPalette() {
   };
   const existing = savedBlockPalette.findIndex((item) => item.id === saved.id);
   if (existing >= 0) savedBlockPalette[existing] = saved;
-  else if (savedBlockPalette.length < 24) savedBlockPalette.push(saved);
+  else if (savedBlockPalette.length < MAX_SAVED_BLOCKS) savedBlockPalette.push(saved);
   else {
-    setStatus("The saved block palette is full (24 blocks). Remove one before saving another.", "error");
+    const message = `Your ${window.BedrockBilling?.tier?.name || "current"} tier allows ${MAX_SAVED_BLOCKS} saved palette blocks. Upgrade to save more.`;
+    setStatus(message, "error");
+    promptForUpgrade(message);
     return;
   }
   if (!persistSavedBlockPalette()) return;
@@ -1629,6 +1635,18 @@ function createPlacedBlock(record) {
   requestCanvasRender();
 }
 
+function appendInstanceMatrix(batch, elements) {
+  const offset = batch.count * 16;
+  const required = offset + 16;
+  if (required > batch.matrices.length) {
+    const expanded = new Float32Array(Math.max(required, batch.matrices.length * 2, 16 * 64));
+    expanded.set(batch.matrices);
+    batch.matrices = expanded;
+  }
+  batch.matrices.set(elements, offset);
+  batch.count += 1;
+}
+
 async function createImportedRenderBatches() {
   clearImportedRenderBatches();
   const buildToken = importedBatchBuildToken;
@@ -1641,11 +1659,7 @@ async function createImportedRenderBatches() {
   worldGroup.updateMatrixWorld(true);
   const rootInverse = new THREE.Matrix4().copy(worldGroup.matrixWorld).invert();
   const batches = new Map();
-  const hitboxCells = [];
-  // One packed matrix buffer avoids retaining a separate Matrix4 object for
-  // every imported hitbox (16 float values per cell).
-  const hitboxMatrices = new Float32Array(records.length * 16);
-  let hitboxCount = 0;
+  const hitboxBatches = new Map();
   const dummy = new THREE.Object3D();
   const matrix = new THREE.Matrix4();
   let frameStartedAt = performance.now();
@@ -1653,6 +1667,16 @@ async function createImportedRenderBatches() {
   for (let index = 0; index < records.length; index += 1) {
     if (buildToken !== importedBatchBuildToken) return;
     const record = records[index];
+    const renderChunkKey = [
+      Math.floor(record.x / RENDER_CHUNK_SIZE),
+      Math.floor(record.y / RENDER_CHUNK_SIZE),
+      Math.floor(record.z / RENDER_CHUNK_SIZE)
+    ].join(",");
+    const hitboxChunkKey = [
+      Math.floor(record.x / HITBOX_CHUNK_SIZE),
+      Math.floor(record.y / HITBOX_CHUNK_SIZE),
+      Math.floor(record.z / HITBOX_CHUNK_SIZE)
+    ].join(",");
     const group = new THREE.Group();
     positionBlockGroup(group, record.x, record.y, record.z);
     createBlockModel(group, record);
@@ -1679,25 +1703,23 @@ async function createImportedRenderBatches() {
       record.group = null;
       group.traverse((child) => {
         matrix.multiplyMatrices(rootInverse, child.matrixWorld);
-        // Structure Void contributes only its vanilla texture mesh; no outline vertices are batched.
         if (!child.isMesh || !child.geometry || !child.material) return;
         const materials = Array.isArray(child.material) ? child.material : [child.material];
         const materialKey = materials.map((material) => material.uuid).join(",");
         const renderOrder = child.renderOrder || 0;
-        const key = child.geometry.uuid + "|" + materialKey + "|" + renderOrder;
+        const key = renderChunkKey + "|" + child.geometry.uuid + "|" + materialKey + "|" + renderOrder;
         let batch = batches.get(key);
         if (!batch) {
           batch = {
             geometry: child.geometry,
             material: child.material,
             renderOrder,
-            matrices: []
+            count: 0,
+            matrices: new Float32Array(16 * 64)
           };
           batches.set(key, batch);
         }
-        // Flatten the 4x4 transform directly into the batch instead of
-        // allocating and retaining a Matrix4 instance for every mesh.
-        batch.matrices.push(...matrix.elements);
+        appendInstanceMatrix(batch, matrix.elements);
       });
     }
 
@@ -1706,17 +1728,24 @@ async function createImportedRenderBatches() {
     dummy.rotation.set(0, 0, 0);
     dummy.scale.setScalar(BLOCK_PIXELS);
     dummy.updateMatrix();
-    hitboxCells.push({
+    let hitboxBatch = hitboxBatches.get(hitboxChunkKey);
+    if (!hitboxBatch) {
+      hitboxBatch = {
+        cells: [],
+        count: 0,
+        matrices: new Float32Array(16 * 64)
+      };
+      hitboxBatches.set(hitboxChunkKey, hitboxBatch);
+    }
+    hitboxBatch.cells.push({
       x: record.x,
       y: record.y,
       z: record.z,
       key: cellKey(record.x, record.y, record.z)
     });
-    hitboxMatrices.set(dummy.matrix.elements, hitboxCount * 16);
-    hitboxCount += 1;
+    appendInstanceMatrix(hitboxBatch, dummy.matrix.elements);
 
-    // Work in short frame-sized slices so parsing and model creation don't
-    // monopolize the browser's main thread during large imports.
+    // Yield regularly so large imports do not monopolize the browser's main thread.
     if (performance.now() - frameStartedAt >= 6) {
       setStatus("Optimizing large structure preview · " + (index + 1).toLocaleString() +
         " / " + records.length.toLocaleString() + " blocks…");
@@ -1730,14 +1759,16 @@ async function createImportedRenderBatches() {
 
   let builtBatches = 0;
   for (const batch of batches.values()) {
-    const instanceCount = batch.matrices.length / 16;
+    const instanceCount = batch.count;
+    if (!instanceCount) continue;
     const instanced = new THREE.InstancedMesh(batch.geometry, batch.material, instanceCount);
     instanced.instanceMatrix.setUsage(THREE.StaticDrawUsage);
-    instanced.instanceMatrix.array.set(batch.matrices);
+    instanced.instanceMatrix.array.set(batch.matrices.subarray(0, instanceCount * 16));
     instanced.instanceMatrix.needsUpdate = true;
-    instanced.castShadow = true;
-    instanced.receiveShadow = true;
+    instanced.castShadow = false;
+    instanced.receiveShadow = false;
     instanced.renderOrder = batch.renderOrder;
+    instanced.frustumCulled = true;
     instanced.computeBoundingSphere();
     worldGroup.add(instanced);
     importedBatchMeshes.push(instanced);
@@ -1751,20 +1782,31 @@ async function createImportedRenderBatches() {
     }
   }
 
-  // Imported Structure Void markers use the same vanilla texture batch as other blocks.
-
-  if (hitboxCount) {
-    const hitboxes = new THREE.InstancedMesh(boxGeometry(1, 1, 1), hitMaterial, hitboxCount);
+  // Smaller, spatially bounded hitbox batches keep block picking responsive.
+  let builtHitboxBatches = 0;
+  for (const batch of hitboxBatches.values()) {
+    if (!batch.count) continue;
+    const hitboxes = new THREE.InstancedMesh(boxGeometry(1, 1, 1), hitMaterial, batch.count);
     hitboxes.userData.isInstancedHitbox = true;
-    hitboxes.userData.cells = hitboxCells;
+    hitboxes.userData.cells = batch.cells;
     hitboxes.instanceMatrix.setUsage(THREE.StaticDrawUsage);
-    hitboxes.instanceMatrix.array.set(hitboxMatrices.subarray(0, hitboxCount * 16));
+    hitboxes.instanceMatrix.array.set(batch.matrices.subarray(0, batch.count * 16));
     hitboxes.instanceMatrix.needsUpdate = true;
+    hitboxes.frustumCulled = true;
     hitboxes.computeBoundingSphere();
     worldGroup.add(hitboxes);
     blockHitTargets.push(hitboxes);
-    importedHitboxBatch = hitboxes;
+    importedHitboxBatches.push(hitboxes);
+    builtHitboxBatches += 1;
+    if (performance.now() - frameStartedAt >= 6) {
+      setStatus("Finishing block-picking batches · " + builtHitboxBatches.toLocaleString() +
+        " / " + hitboxBatches.size.toLocaleString() + " regions…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (buildToken !== importedBatchBuildToken) return;
+      frameStartedAt = performance.now();
+    }
   }
+
   requestCanvasRender();
 }
 
@@ -1778,10 +1820,11 @@ function clearImportedRenderBatches() {
     }
   }
   importedBatchMeshes = [];
-  if (importedHitboxBatch) {
-    worldGroup?.remove(importedHitboxBatch);
-    blockHitTargets = blockHitTargets.filter((target) => target !== importedHitboxBatch);
-    importedHitboxBatch = null;
+  if (importedHitboxBatches.length) {
+    const removedHitboxes = new Set(importedHitboxBatches);
+    for (const hitboxes of importedHitboxBatches) worldGroup?.remove(hitboxes);
+    blockHitTargets = blockHitTargets.filter((target) => !removedHitboxes.has(target));
+    importedHitboxBatches = [];
   }
   for (const record of placedBlocks.values()) {
     if (record.isBatchedImport && record.group) {
@@ -1908,8 +1951,11 @@ function placeBlock(x, y, z) {
     const key = cellKey(cell.x, cell.y, cell.z);
     if (placedBlocks.has(key)) return setStatus(`Cell ${key} is occupied. Click another block face or right-click to remove it.`);
   }
-  if (placedBlocks.size + cells.length > MAX_PLACED_BLOCKS) {
-    return setStatus(`The editor limit is ${MAX_PLACED_BLOCKS.toLocaleString()} placed blocks.`, "error");
+  if (placedBlocks.size + cells.length > MAX_STRUCTURE_VOLUME) {
+    const message = `Your ${window.BedrockBilling?.tier?.name || "current"} tier allows up to ${MAX_STRUCTURE_VOLUME.toLocaleString()} placed cells. Upgrade for more capacity.`;
+    setStatus(message, "error");
+    promptForUpgrade(message);
+    return;
   }
 
   const baseStates = { ...appliedStateOverrides };
@@ -2102,13 +2148,19 @@ function resetCamera() {
 }
 function updateDimensions() {
   const next = currentSizeFromInputs();
-  if (Object.values(next).some((value) => !Number.isInteger(value) || value < 1 || value > 128)) {
+  if (Object.values(next).some((value) => !Number.isInteger(value) || value < 1 || value > MAX_WORKSPACE_DIMENSION)) {
     ui.sizeX.value = currentSize.x; ui.sizeY.value = currentSize.y; ui.sizeZ.value = currentSize.z;
-    return setStatus("Workspace dimensions must be whole numbers from 1 to 128.", "error");
+    const message = `Your ${window.BedrockBilling?.tier?.name || "current"} tier supports up to ${MAX_WORKSPACE_DIMENSION} blocks per axis.`;
+    setStatus(message, "error");
+    promptForUpgrade(message);
+    return;
   }
   if (next.x * next.y * next.z > MAX_STRUCTURE_VOLUME) {
     ui.sizeX.value = currentSize.x; ui.sizeY.value = currentSize.y; ui.sizeZ.value = currentSize.z;
-    return setStatus(`Workspace volume exceeds ${MAX_STRUCTURE_VOLUME.toLocaleString()} cells.`, "error");
+    const message = `Your ${window.BedrockBilling?.tier?.name || "current"} tier supports up to ${MAX_STRUCTURE_VOLUME.toLocaleString()} workspace cells.`;
+    setStatus(message, "error");
+    promptForUpgrade(message);
+    return;
   }
   currentSize = next;
   let removed = 0;
@@ -2150,8 +2202,15 @@ function clearBuild() {
   setStatus("Structure cleared. Choose a block to start again.");
 }
 function initializeRenderer() {
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  const compactViewport = window.innerWidth <= 900;
+  renderer = new THREE.WebGLRenderer({
+    antialias: !compactViewport,
+    alpha: true,
+    powerPreference: "high-performance",
+    stencil: false,
+    preserveDrawingBuffer: false
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compactViewport ? 1.25 : 1.5));
   renderer.setSize(ui.viewport.clientWidth, ui.viewport.clientHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x182126, 0);
@@ -2376,12 +2435,12 @@ function validateImportedSize(size) {
     throw new Error("The imported structure has no valid three-axis size.");
   }
   const values = Array.from(size, Number);
-  if (values.some((value) => !Number.isInteger(value) || value < 1 || value > 128)) {
-    throw new Error("Imported dimensions must be whole numbers from 1 to 128 on each axis.");
+  if (values.some((value) => !Number.isInteger(value) || value < 1 || value > MAX_WORKSPACE_DIMENSION)) {
+    throw new Error(`Your current tier supports imported dimensions up to ${MAX_WORKSPACE_DIMENSION} blocks per axis. Upgrade to import larger structures.`);
   }
   const volume = values[0] * values[1] * values[2];
   if (!Number.isSafeInteger(volume) || volume > MAX_STRUCTURE_VOLUME) {
-    throw new Error("The imported structure exceeds the editor's 1,000,000-cell workspace limit.");
+    throw new Error(`The imported structure exceeds your current tier's ${MAX_STRUCTURE_VOLUME.toLocaleString()}-cell workspace limit. Upgrade to import larger structures.`);
   }
   return values;
 }
@@ -2443,9 +2502,7 @@ async function parseImportedMcstructure(arrayBuffer, fileName) {
     const y = Math.floor((index % (size[1] * size[2])) / size[2]);
     const z = index % size[2];
     blocks.push({ x, y, z, name: block.name, states: { ...(block.states || {}) } });
-    if (blocks.length > MAX_PLACED_BLOCKS) {
-      throw new Error("This file contains more than " + MAX_PLACED_BLOCKS.toLocaleString() + " non-air blocks. The editor import limit is " + MAX_PLACED_BLOCKS.toLocaleString() + ".");
-    }
+    // The validated structure volume already bounds the number of imported cells.
     // Give the browser regular paint/input time while scanning large volume
     // arrays, instead of monopolizing the main thread for the whole file.
     if ((index & 1023) === 1023 && performance.now() - parseFrameStartedAt >= 6) {
@@ -2603,7 +2660,7 @@ function parseImportedMcfunction(source, fileName) {
       const key = cellKey(x, y, z);
       if (isOrdinaryAir(block.name)) placed.delete(key);
       else placed.set(key, { x, y, z, name: block.name, states: { ...(block.states || {}) } });
-      if (placed.size > MAX_PLACED_BLOCKS) throw new Error("The function exceeds the " + MAX_PLACED_BLOCKS.toLocaleString() + " placed-block import limit.");
+      if (placed.size > MAX_STRUCTURE_VOLUME) throw new Error("The function exceeds the editor's " + MAX_STRUCTURE_VOLUME.toLocaleString() + "-cell workspace capacity.");
     };
     try {
       if (command === "setblock") {
@@ -2636,8 +2693,8 @@ function parseImportedMcfunction(source, fileName) {
         const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
         const minZ = Math.min(z1, z2), maxZ = Math.max(z1, z2);
         const volume = (maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1);
-        if (!Number.isSafeInteger(volume) || volume > MAX_PLACED_BLOCKS) {
-          throw new Error("This fill command exceeds the " + MAX_PLACED_BLOCKS.toLocaleString() + " cell import limit.");
+        if (!Number.isSafeInteger(volume) || volume > MAX_STRUCTURE_VOLUME) {
+          throw new Error("This fill command exceeds the editor's " + MAX_STRUCTURE_VOLUME.toLocaleString() + "-cell workspace capacity.");
         }
         for (let x = minX; x <= maxX; x += 1) {
           for (let y = minY; y <= maxY; y += 1) {
@@ -2678,7 +2735,7 @@ function parseImportedMcfunction(source, fileName) {
   }), { minX: Infinity, minY: Infinity, minZ: Infinity, maxX: -Infinity, maxY: -Infinity, maxZ: -Infinity });
   let size;
   const metadataFits = workspace && workspace.length === 3 &&
-    workspace.every((value) => Number.isInteger(value) && value >= 1 && value <= 128) &&
+    workspace.every((value) => Number.isInteger(value) && value >= 1 && value <= MAX_WORKSPACE_DIMENSION) &&
     shifted.every((block) => block.x >= 0 && block.y >= 0 && block.z >= 0 &&
       block.x < workspace[0] && block.y < workspace[1] && block.z < workspace[2]);
   if (metadataFits) {
@@ -2754,9 +2811,7 @@ async function importStructureFile(file) {
       : parseImportedMcfunction(await file.text(), file.name);
     const size = validateImportedSize(parsed.size);
     if (!parsed.blocks.length) throw new Error("The selected file contains no blocks to place.");
-    if (parsed.blocks.length > MAX_PLACED_BLOCKS) {
-      throw new Error("The editor can place up to " + MAX_PLACED_BLOCKS.toLocaleString() + " blocks per workspace.");
-    }
+    // Parsed dimensions and block coordinates are checked before records are committed.
     const catalogLookup = new Map();
     for (const entry of catalog) {
       catalogLookup.set(entry.id, entry);
@@ -3112,6 +3167,81 @@ window.BedrockBuilder = {
     selectBlock(entry);
     return true;
   },
+  getSaveData() {
+    return {
+      size: { ...currentSize },
+      coordinateMode: ui.coordinateMode.value === "absolute" ? "absolute" : "relative",
+      origin: [Number(ui.originX.value) || 0, Number(ui.originY.value) || 0, Number(ui.originZ.value) || 0],
+      blocks: [...placedBlocks.values()].map((record) => ({
+        id: record.id,
+        name: record.name || record.id,
+        x: record.x, y: record.y, z: record.z,
+        states: record.states && typeof record.states === "object" ? { ...record.states } : {}
+      }))
+    };
+  },
+  loadSaveData(data) {
+    if (!renderer || !worldGroup) return { ok: false, error: "The 3D workspace is not ready yet." };
+    const size = {
+      x: Number(data?.size?.x),
+      y: Number(data?.size?.y),
+      z: Number(data?.size?.z)
+    };
+    if (Object.values(size).some((value) => !Number.isInteger(value) || value < 1 || value > MAX_WORKSPACE_DIMENSION) ||
+        size.x * size.y * size.z > MAX_STRUCTURE_VOLUME) {
+      return { ok: false, error: "This saved structure is larger than your current plan allows." };
+    }
+    if (!Array.isArray(data?.blocks) || !data.blocks.length || data.blocks.length > MAX_STRUCTURE_VOLUME) {
+      return { ok: false, error: "The saved structure contains no blocks or exceeds your current block limit." };
+    }
+
+    const seen = new Set();
+    const records = [];
+    for (const block of data.blocks) {
+      const name = String(block?.name || block?.id || "").trim();
+      const x = Number(block?.x), y = Number(block?.y), z = Number(block?.z);
+      if (!name || ![x, y, z].every(Number.isInteger) ||
+          x < 0 || y < 0 || z < 0 || x >= size.x || y >= size.y || z >= size.z) {
+        return { ok: false, error: "A saved block has an invalid position or identifier." };
+      }
+      const key = cellKey(x, y, z);
+      if (seen.has(key)) return { ok: false, error: "The saved structure contains overlapping blocks." };
+      seen.add(key);
+      const entry = registerImportedBlock(name);
+      records.push({
+        id: entry.id,
+        name: entry.name,
+        x, y, z,
+        states: block.states && typeof block.states === "object" && !Array.isArray(block.states)
+          ? { ...block.states } : {},
+        model: entry.model,
+        customModelKey: entry.customModelKey || null
+      });
+    }
+
+    clearBuild();
+    ui.sizeX.value = size.x;
+    ui.sizeY.value = size.y;
+    ui.sizeZ.value = size.z;
+    updateDimensions();
+    if (currentSize.x !== size.x || currentSize.y !== size.y || currentSize.z !== size.z) {
+      return { ok: false, error: "The workspace dimensions could not be applied." };
+    }
+    const origin = Array.isArray(data.origin) ? data.origin : [0, 0, 0];
+    ui.originX.value = Number(origin[0]) || 0;
+    ui.originY.value = Number(origin[1]) || 0;
+    ui.originZ.value = Number(origin[2]) || 0;
+    ui.coordinateMode.value = data.coordinateMode === "absolute" ? "absolute" : "relative";
+    [ui.originX, ui.originY, ui.originZ].forEach((input) => {
+      input.disabled = ui.coordinateMode.value !== "absolute";
+    });
+
+    const result = window.BedrockBuilder.addBlocks(records);
+    if (!result.ok) return result;
+    setMobileView("canvas");
+    updateBuildSummary();
+    return { ok: true, added: records.length };
+  },
   registerCustomBlock(block) {
     if (!block || typeof block.id !== "string" || !block.model || !block.textureUrls) return false;
     const id = block.id.trim().toLowerCase();
@@ -3165,8 +3295,11 @@ window.BedrockBuilder = {
   addBlocks(blocks) {
     if (!worldGroup || !renderer) return { ok: false, error: "The 3D renderer is not ready." };
     if (!Array.isArray(blocks) || !blocks.length) return { ok: false, error: "There are no blocks to add." };
-    if (placedBlocks.size + blocks.length > MAX_PLACED_BLOCKS) {
-      return { ok: false, error: `The editor limit is ${MAX_PLACED_BLOCKS.toLocaleString()} placed blocks.` };
+    // Keep generated batches inside the active account tier's cell ceiling.
+    if (placedBlocks.size + blocks.length > MAX_STRUCTURE_VOLUME) {
+      const message = `Your current tier allows up to ${MAX_STRUCTURE_VOLUME.toLocaleString()} placed cells. Upgrade for more capacity.`;
+      promptForUpgrade(message);
+      return { ok: false, error: message };
     }
     const batchKeys = new Set();
     const records = [];
@@ -3210,7 +3343,22 @@ window.BedrockBuilder = {
   }
 };
 
-initialize().then(() => {
+loadBuilderEntitlements().then(({ limits }) => {
+  MAX_STRUCTURE_VOLUME = limits.maxVolume;
+  MAX_WORKSPACE_DIMENSION = limits.maxDimension;
+  MAX_SAVED_BLOCKS = limits.maxSavedBlocks;
+  if (savedBlockPalette.length > MAX_SAVED_BLOCKS) {
+    savedBlockPalette = savedBlockPalette.slice(0, MAX_SAVED_BLOCKS);
+    persistSavedBlockPalette();
+  }
+  [ui.sizeX, ui.sizeY, ui.sizeZ].forEach((input) => {
+    input.max = String(MAX_WORKSPACE_DIMENSION);
+  });
+  return initialize();
+}).then(() => {
   window.BedrockBuilder.ready = true;
   window.dispatchEvent(new CustomEvent("bv:builder-ready"));
+}).catch((error) => {
+  console.error("Bedrock Voxel Builder initialization failed:", error);
+  setStatus(error.message || "The builder could not finish loading.", "error");
 });

@@ -1,0 +1,39 @@
+[auth]
+enabled = true
+providers = ["email"]
+
+[[secret]]
+name = "PAYPAL_CLIENT_ID"
+required = false
+description = "PayPal REST app Client ID from the PayPal Developer Dashboard."
+
+[[secret]]
+name = "PAYPAL_CLIENT_SECRET"
+required = false
+description = "PayPal REST app Secret. Keep this private; it is used only by server-side checkout routes."
+
+[[config]]
+name = "paypal_environment"
+type = "select"
+label = "PayPal environment"
+options = [
+  { value = "sandbox", label = "Sandbox · test payments" },
+  { value = "live", label = "Live · real payments" }
+]
+default = "sandbox"
+
+[db.tables.billing_orders]
+read = "own"
+write = "own"
+
+[db.tables.user_entitlements]
+read = "own"
+write = "own"
+
+[db.tables.account_profiles]
+read = "own"
+write = "own"
+
+[db.tables.saved_structures]
+read = "own"
+write = "own"

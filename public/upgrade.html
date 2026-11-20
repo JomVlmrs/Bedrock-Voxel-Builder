@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Upgrade · Bedrock Voxel Builder</title>
+  <link rel="stylesheet" href="./billing.css">
+</head>
+<body data-billing-page="upgrade">
+  <main class="billing-shell">
+    <header class="billing-header">
+      <a class="billing-brand" href="/">
+        <span class="billing-mark">BV</span>
+        <span>Bedrock Voxel Builder</span>
+      </a>
+      <a class="billing-link-button" href="/">Back to builder</a>
+    </header>
+
+    <p class="billing-eyebrow">Workspace plans</p>
+    <h1 class="billing-title">Build bigger structures.</h1>
+    <p class="billing-lead">Choose a one-time upgrade to expand your workspace, increase your saved block palette, and keep the tier on your account for life. No recurring subscription.</p>
+
+    <section class="billing-panel">
+      <div id="accountStatus" class="billing-notice">Checking account…</div>
+      <div id="paypalStatus" class="billing-notice" style="margin-top:8px">Checking PayPal setup…</div>
+      <div id="cancelNotice" class="billing-notice" style="margin-top:8px" hidden>Checkout was cancelled. No payment was taken.</div>
+      <div id="pageError" class="billing-notice error" style="margin-top:8px" role="status"></div>
+      <div id="loginPrompt" style="margin-top:12px" hidden>
+        <a class="billing-link-button" href="/login?next=%2Fupgrade.html">Sign in to purchase a tier</a>
+      </div>
+    </section>
+
+    <section class="billing-grid" aria-label="Available plans">
+      <article class="billing-card" data-tier-card="free">
+        <p class="billing-eyebrow">Included</p>
+        <h2>Starter</h2>
+        <p class="billing-price">Free</p>
+        <p class="billing-period">Forever</p>
+        <p class="billing-description">A smaller workspace for learning and quick builds.</p>
+        <ul class="billing-features">
+          <li>32 blocks per axis</li>
+          <li>32,768 workspace cells</li>
+          <li>12 saved palette blocks</li>
+        </ul>
+        <button class="billing-button secondary" type="button" disabled>Free tier</button>
+      </article>
+
+      <article class="billing-card" data-tier-card="builder_plus">
+        <p class="billing-eyebrow">First upgrade</p>
+        <h2>Builder+</h2>
+        <p class="billing-price">₱99</p>
+        <p class="billing-period">One-time · lifetime access</p>
+        <p class="billing-description">More room for detailed structures and saved block choices.</p>
+        <ul class="billing-features">
+          <li>64 blocks per axis</li>
+          <li>262,144 workspace cells</li>
+          <li>24 saved palette blocks</li>
+        </ul>
+        <button class="billing-button" type="button" data-tier="builder_plus">Buy Builder+</button>
+      </article>
+
+      <article class="billing-card featured" data-tier-card="pro">
+        <p class="billing-eyebrow">Advanced builds</p>
+        <h2>Pro</h2>
+        <p class="billing-price">₱249</p>
+        <p class="billing-period">One-time · lifetime access</p>
+        <p class="billing-description">A large workspace with a larger reusable block palette.</p>
+        <ul class="billing-features">
+          <li>96 blocks per axis</li>
+          <li>750,000 workspace cells</li>
+          <li>48 saved palette blocks</li>
+        </ul>
+        <button class="billing-button" type="button" data-tier="pro">Buy Pro</button>
+      </article>
+
+      <article class="billing-card" data-tier-card="studio">
+        <p class="billing-eyebrow">Full capacity</p>
+        <h2>Studio</h2>
+        <p class="billing-price">₱499</p>
+        <p class="billing-period">One-time · lifetime access</p>
+        <p class="billing-description">The full workspace capacity currently supported by the editor.</p>
+        <ul class="billing-features">
+          <li>128 blocks per axis</li>
+          <li>1,000,000 workspace cells</li>
+          <li>96 saved palette blocks</li>
+        </ul>
+        <button class="billing-button" type="button" data-tier="studio">Buy Studio</button>
+      </article>
+    </section>
+
+    <p class="billing-footer">Payments are processed by PayPal. Workspace capacity is capped by the editor's current renderer safety ceiling. PayPal account fees, currency conversion, and receiving preferences are controlled by PayPal and your merchant account.</p>
+  </main>
+  <script defer src="./billing-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+:root{color-scheme:dark;--page:#171c20;--panel:#24292d;--raised:#2d353a;--line:#3a444a;--muted:#91a0a5;--text:#eef3f3;--accent:#8bd7bd;--accent-soft:#b5f0d9;--danger:#e79b91}
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0}
+body{background:var(--page);color:var(--text);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.billing-shell{width:min(1080px,100%);margin:0 auto}
+.billing-header{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:10px 0 40px}
+.billing-brand{display:flex;align-items:center;gap:12px;color:var(--text);font-weight:750}
+.billing-mark{width:42px;height:42px;border-radius:12px;background:#29443b;color:var(--accent-soft);display:grid;place-items:center;font-weight:850}
+.billing-eyebrow{color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.billing-title{font-size:clamp(30px,5vw,48px);line-height:1.08;letter-spacing:-.045em;margin:8px 0 12px}
+.billing-lead{max-width:690px;color:var(--muted);font-size:16px;margin:0 0 28px}
+.billing-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin:18px 0}
+.billing-notice{color:var(--muted);font-size:14px}
+.billing-notice strong{color:var(--text)}
+.billing-notice.error{color:#ffb5aa}
+.billing-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch}
+.billing-card{display:flex;flex-direction:column;min-height:320px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:21px}
+.billing-card.featured{border-color:#6cb49c;box-shadow:inset 0 0 0 1px #6cb49c}
+.billing-card h2{font-size:20px;margin:7px 0 3px}
+.billing-price{font-size:31px;font-weight:800;letter-spacing:-.04em;margin:10px 0 0}
+.billing-period{font-size:12px;color:var(--muted)}
+.billing-description{color:var(--muted);font-size:13px;min-height:42px}
+.billing-features{list-style:none;padding:0;margin:16px 0 22px;color:#d4dfdc;font-size:13px}
+.billing-features li{padding:6px 0;border-top:1px solid #343d41}
+.billing-button{margin-top:auto;width:100%;min-height:44px;border:0;border-radius:9px;background:var(--accent);color:#14211c;font-weight:800;cursor:pointer;padding:10px 13px}
+.billing-button:hover{background:var(--accent-soft)}
+.billing-button:disabled{opacity:.42;cursor:not-allowed}
+.billing-button.secondary{background:var(--raised);color:var(--text);border:1px solid var(--line)}
+.billing-link-button{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--raised);padding:10px 16px;border-radius:9px;color:var(--text);font-weight:700}
+.billing-footer{color:var(--muted);font-size:12px;margin:24px 0 50px}
+[hidden]{display:none!important}
+@media(max-width:900px){.billing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){body{padding:16px}.billing-header{margin-bottom:28px}.billing-grid{grid-template-columns:1fr}.billing-card{min-height:0}.billing-description{min-height:0}.billing-title{font-size:34px}}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Confirm payment · Bedrock Voxel Builder</title>
+  <link rel="stylesheet" href="./billing.css">
+</head>
+<body data-billing-page="return">
+  <main class="billing-shell" style="max-width:680px;padding-top:8vh">
+    <header class="billing-header">
+      <a class="billing-brand" href="/">
+        <span class="billing-mark">BV</span>
+        <span>Bedrock Voxel Builder</span>
+      </a>
+    </header>
+    <p class="billing-eyebrow">PayPal checkout</p>
+    <h1 class="billing-title" id="returnTitle">Confirming your payment…</h1>
+    <p class="billing-lead" id="returnMessage" role="status" aria-live="polite">The builder will unlock your tier only after PayPal confirms the completed payment.</p>
+    <div class="billing-panel">
+      <div id="returnDetails" class="billing-notice">Verifying PayPal order…</div>
+      <button id="retryCapture" class="billing-button" type="button" style="margin-top:16px" hidden>Retry confirmation</button>
+      <a id="returnHome" class="billing-link-button" href="/" style="margin-top:16px" hidden>Return to builder</a>
+      <a id="returnPlans" class="billing-link-button" href="/upgrade.html" style="margin-top:16px" hidden>View plans</a>
+    </div>
+    <p class="billing-footer">Do not close this page until payment verification has finished.</p>
+  </main>
+  <script defer src="./billing-page.js"></script>
+</body>
+</html>

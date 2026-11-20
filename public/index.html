@@ -39,6 +39,11 @@
           <label><span>Z</span><input id="sizeZ" type="number" min="1" max="128" value="16" aria-label="Workspace depth"></label>
         </div>
         <div class="version-chip" id="sampleVersion">Loading vanilla data…</div>
+        <a class="plan-badge" id="planBadge" href="./upgrade.html" title="View workspace tiers">FREE · UPGRADE</a>
+        <div class="header-auth-actions">
+          <button id="structuresButton" class="header-account-button" type="button">MY STRUCTURES</button>
+          <button id="accountButton" class="header-account-button" type="button">SIGN IN</button>
+        </div>
       </div>
     </header>
 
@@ -210,6 +215,28 @@
       </div>
       </footer>
   </div>
+  <dialog id="structureLibraryDialog" class="structure-library-dialog" aria-labelledby="structureLibraryTitle">
+    <div class="structure-library-shell">
+      <header class="structure-library-header">
+        <div>
+          <h2 id="structureLibraryTitle">My Structures</h2>
+          <p id="structureLibraryAccount">Saved privately to your account</p>
+        </div>
+        <button id="closeStructureLibrary" class="structure-library-close" type="button" aria-label="Close saved structures">×</button>
+      </header>
+      <form id="saveStructureForm" class="save-structure-form">
+        <label for="structureSaveName">Structure name</label>
+        <div class="save-structure-controls">
+          <input id="structureSaveName" type="text" maxlength="80" placeholder="e.g. Survival Base" required>
+          <button id="saveStructureButton" type="submit">SAVE BUILD</button>
+        </div>
+      </form>
+      <p id="structureLibraryStatus" class="structure-library-status" role="status" aria-live="polite">Loading your saved structures…</p>
+      <div id="savedStructuresList" class="saved-structures-list">
+        <div class="saved-structures-empty">Your saved structures will appear here.</div>
+      </div>
+    </div>
+  </dialog>
   <footer class="site-community-footer" aria-label="Community and live visitor statistics">
     <div class="footer-community">
       <a class="discord-invite" href="https://discord.gg/eEMvsrwwGW" target="_blank" rel="noopener noreferrer" aria-label="Join the Bedrock Voxel Builder Discord server for development updates">
@@ -435,8 +462,9 @@
   </dialog>
 
   <script defer src="./catalog-fallback.js"></script>
-  <script type="module" src="./builder.js?v=58"></script>
+  <script type="module" src="./builder.js?v=68"></script>
   <script type="module" src="./custom-tools.js?v=58"></script>
+  <script type="module" src="./structure-saves.js?v=1"></script>
   <script defer src="./visitor-tracker.js"></script>
   <script defer src="./block-icons.js"></script>
 </body>

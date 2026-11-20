@@ -1,30 +1,34 @@
 # Bedrock Voxel Builder
 
-A browser-based builder for creating Minecraft Bedrock structures and exporting them as `.mcstructure` or `.mcfunction` files.
+A browser-based Minecraft Bedrock structure editor. Build with the vanilla block catalogue, textured block models, block states and custom blocks, then export structures as `.mcstructure` or `.mcfunction` files.
 
-This repository mirrors the saved source files from the Hatchable project.
+## Features
 
-## Community and updates
+- 3D Bedrock structure editor with a searchable block catalogue and block-state controls.
+- Import and export structure files, with optimized rendering for larger builds.
+- Per-account saved structure library: save, reopen, update and delete structures.
+- Account sign-in with email one-time verification codes and optional device passkeys. Authentication is managed by Hatchable; this app does not use password-based sign-in.
+- Optional plan upgrades through PayPal. Checkout is handled by server-side Hatchable routes.
+- Custom block tools and a shared community visit counter / active-tab indicator.
 
 Join the [Bedrock Voxel Builder Discord](https://discord.gg/eEMvsrwwGW) for development updates and announcements.
 
-The footer includes a shared visit counter and a live active-tab indicator. It uses an anonymous random tab-session ID, refreshes active presence every 25 seconds, and considers a tab active for 90 seconds after its last heartbeat. A visit is counted once per tab session after 30 minutes of inactivity. It does not collect visitor names or IP addresses.
-
 ## Repository layout
 
-- `public/` — the complete static frontend, block catalogue, block-state data, texture metadata, and model geometry files.
-- `api/custom-blocks.js` — the Hatchable custom-block library API source.
-- `api/visitors.js` — the public visitor statistics endpoint used by the footer.
-- `migrations/` — database schema migrations used by the Hatchable backend.
+- `public/` — static frontend, login and upgrade screens, block catalogue, textures, state data, and model geometry.
+- `api/` — Hatchable backend routes for accounts, saved structures, billing, custom blocks, and visitor statistics.
+- `lib/` — shared billing and PayPal server-side helpers.
+- `migrations/` — PostgreSQL schema migrations for custom blocks, visitor statistics, billing, account profiles, and saved structures.
+- `hatchable.toml` — authentication, secret declarations, PayPal environment configuration, and per-user database access.
 - `.github/workflows/jekyll-gh-pages.yml` — validates local file references and publishes only `public/` to GitHub Pages.
 
 ## Hosting notes
 
-GitHub Pages is a static mirror. It does not execute the Hatchable API routes or provide their PostgreSQL database. Custom-block uploads and saved custom-block persistence require the Hatchable-hosted app.
-
-The live visit tracker on GitHub Pages also calls the Hatchable visitor API. **Set the Hatchable project's visibility to Public in Hatchable Console → Project Settings** to let anonymous GitHub Pages visitors reach that API. Until then the footer displays **PUBLISH APP** instead of showing a fake live count. This is a separate hosting setting; it does not change the static GitHub Pages site.
+GitHub Pages is a **static mirror**. It can serve the browser editor, but it does not execute Hatchable API routes or provide the PostgreSQL database. Account sign-in, cloud-saved structures, custom-block persistence, visitor statistics, and PayPal plan purchases require the Hatchable-hosted app.
 
 - GitHub Pages: https://jomvlmrs.github.io/Bedrock-Voxel-Builder/
 - Hatchable app: https://bedrock-structure-lznl.hatchable.site/
 
-The Pages workflow rewrites root-relative asset and data paths for the repository's project-site URL and verifies that the frontend, API, and migration source files are present.
+The visitor tracker calls the Hatchable visitor API. Set the Hatchable project's visibility to **Public** in Hatchable Console → Project Settings to let anonymous GitHub Pages visitors reach that API. Until then, the footer displays **PUBLISH APP** instead of showing a fake live count.
+
+PayPal credentials belong in the Hatchable project's Setup section, not in this repository. The source contains only the secret names and configuration declarations; never commit live credentials or user data.
