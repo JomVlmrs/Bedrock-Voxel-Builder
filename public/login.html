@@ -46,7 +46,7 @@
         <input class="login-input" id="loginCode" type="text" inputmode="numeric" maxlength="6"
           pattern="[0-9]*" placeholder="6-digit code" autocomplete="one-time-code" aria-label="6-digit code">
       </div>
-      <button class="login-button" id="loginSubmit" type="submit">Continue</button>
+      <button class="login-button" id="loginSubmit" type="submit">Sign in / Create account</button>
       <button class="login-button secondary" id="loginBack" type="button" hidden>Use a different email</button>
     </form>
     <div id="nameRow" hidden>
@@ -166,7 +166,12 @@
   }
 
   if (!A) {
-    say("Sign-in is unavailable. Refresh and try again.", true);
+    if (location.hostname !== "bedrock-structure-lznl.hatchable.site") {
+      say("Opening the hosted account sign-in…");
+      location.replace("https://bedrock-structure-lznl.hatchable.site/login?next=" + encodeURIComponent(nextPath()));
+      return;
+    }
+    say("The sign-in service did not load. Reload the page and try again.", true);
     submit.disabled = true;
     return;
   }
@@ -222,7 +227,7 @@
     codeRow.hidden = true;
     emailRow.hidden = false;
     back.hidden = true;
-    submit.textContent = "Continue";
+    submit.textContent = "Send sign-in code";
     sub.textContent = "Enter your email address. We'll send you a one-time verification code.";
     say("");
     emailEl.focus();
@@ -247,7 +252,7 @@
         emailRow.hidden = false;
         title.textContent = "Verify your email";
         sub.textContent = "Enter the email address for your account. We'll send a one-time code.";
-        submit.textContent = "Continue";
+        submit.textContent = "Send sign-in code";
         say("");
         attachPasskeyAutofill();
         emailEl.focus();

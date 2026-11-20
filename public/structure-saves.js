@@ -24,7 +24,12 @@
 
   function login() {
     const next = location.pathname + location.search + location.hash;
-    location.assign("/login?next=" + encodeURIComponent(next || "/"));
+    const hostedApp = "https://bedrock-structure-lznl.hatchable.site";
+    const isHostedApp = location.hostname === "bedrock-structure-lznl.hatchable.site";
+    const target = isHostedApp
+      ? "/login?next=" + encodeURIComponent(next || "/")
+      : hostedApp + "/login?next=" + encodeURIComponent("/");
+    location.assign(target);
   }
 
   async function requestJSON(url, options = {}) {
