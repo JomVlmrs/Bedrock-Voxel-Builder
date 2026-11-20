@@ -2,6 +2,11 @@
 
 A browser-based Minecraft Bedrock structure editor. Build with the vanilla block catalogue, textured block models, block states and custom blocks, then export structures as `.mcstructure` or `.mcfunction` files.
 
+
+## AI disclosure
+
+This website was created with the assistance of AI. Its features and content are reviewed and maintained by the project owner.
+
 ## Features
 
 - 3D Bedrock structure editor with a searchable block catalogue and block-state controls.

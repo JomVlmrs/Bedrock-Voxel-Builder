@@ -158,6 +158,21 @@ body {
     flex-wrap: wrap;
   }
 }
+.site-community-footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.site-ai-disclaimer {
+  width: 100%;
+  margin: 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  color: #94a39f;
+  font-size: 8px;
+  line-height: 1.45;
+  text-align: center;
+}
 @media (prefers-reduced-motion: reduce) {
   .visitor-live-indicator { animation: none; }
 }
