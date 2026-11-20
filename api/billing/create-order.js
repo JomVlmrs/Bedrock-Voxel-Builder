@@ -80,9 +80,19 @@ export default async function (req, res) {
       "UPDATE billing_orders SET status = 'FAILED' WHERE id = $1",
       [localOrderId]
     );
-    console.error("PayPal order creation failed:", error.message);
+    console.error("billing.paypal.create_order_failed", {
+      environment: settings.environment,
+      status: error.httpStatus || null,
+      code: error.code || "PAYPAL_REQUEST_FAILED",
+      debug_id: error.debugId || null,
+      provider_message: String(error.providerMessage || error.message || "").slice(0, 180)
+    });
+    const authRejected = error.code === "INVALID_CLIENT" || error.httpStatus === 401;
+    const environmentName = settings.environment === "live" ? "Live" : "Sandbox";
     return res.status(502).json({
-      error: "PayPal could not create the checkout. Check your PayPal app credentials and try again."
+      error: authRejected
+        ? "PayPal rejected the saved app credentials for the selected " + environmentName + " environment. In Hatchable Setup, confirm the Client ID and Secret are from the same PayPal REST app and match the selected Sandbox or Live mode. No payment was taken."
+        : "PayPal could not create the checkout. No payment was taken. Please retry later or contact the site owner."
     });
   }
 }
